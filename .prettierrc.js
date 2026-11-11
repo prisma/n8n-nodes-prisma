@@ -48,4 +48,15 @@ module.exports = {
 	 * https://prettier.io/docs/en/options.html#print-width
 	 */
 	printWidth: 100,
+
+	/**
+	 * Markdown renders tabs eight columns wide on GitHub, so code samples in docs use
+	 * two spaces and are left exactly as written.
+	 */
+	overrides: [
+		{
+			files: '*.md',
+			options: { useTabs: false, embeddedLanguageFormatting: 'off' },
+		},
+	],
 };

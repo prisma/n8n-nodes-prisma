@@ -57,7 +57,7 @@ Add a **Prisma Postgres** node to a workflow, select the **Project** resource wi
 
 Add a second **Prisma Postgres** node after the first, and select the **Connection** resource with the **Create** operation. In the **Database** field, switch to **By ID** and enter the expression below, which picks up the database that the previous node created:
 
-```text
+```js
 {{ $json.database.id }}
 ```
 
@@ -67,12 +67,12 @@ When you select **Execute workflow**, the second node returns everything a Postg
 
 ```json
 {
-	"host": "pooled.db.prisma.io",
-	"port": 5432,
-	"database": "postgres",
-	"user": "...",
-	"password": "...",
-	"ssl": "require"
+  "host": "pooled.db.prisma.io",
+  "port": 5432,
+  "database": "postgres",
+  "user": "...",
+  "password": "...",
+  "ssl": "require"
 }
 ```
 
@@ -160,8 +160,13 @@ If you prefer SQL over the PGVector Store node, [`sql/queries.sql`](sql/queries.
 The following query, for example, returns the rows that are closest in meaning to a question:
 
 ```sql
-SELECT id, document_id, source, content, metadata,
-       1 - (embedding <=> $1::vector) AS similarity
+SELECT
+  id,
+  document_id,
+  source,
+  content,
+  metadata,
+  1 - (embedding <=> $1::vector) AS similarity
 FROM documents
 ORDER BY embedding <=> $1::vector
 LIMIT $2;
@@ -169,8 +174,8 @@ LIMIT $2;
 
 The `$1` and `$2` placeholders are filled from **Options > Query Parameters** in the Postgres node, where you enter an expression that returns a list with the embedding of the question first and the number of results second:
 
-```text
-{{ [ JSON.stringify($json.embedding), 5 ] }}
+```js
+{{ [JSON.stringify($json.embedding), 5] }}
 ```
 
 ## Example workflows
@@ -214,18 +219,20 @@ n8n has a built-in node, also called **n8n**, that can create credentials. When 
 
 To configure it, set **Resource** to **Credential**, **Operation** to **Create**, and **Credential Type** to `postgres`, and then enter the following in **Data**:
 
-```text
-{{ JSON.stringify({
-	host: $json.host,
-	port: $json.port,
-	database: $json.database,
-	user: $json.user,
-	password: $json.password,
-	ssl: "require",
-	allowUnauthorizedCerts: false,
-	sshTunnel: false,
-	maxConnections: 10
-}) }}
+```js
+{{
+  JSON.stringify({
+    host: $json.host,
+    port: $json.port,
+    database: $json.database,
+    user: $json.user,
+    password: $json.password,
+    ssl: "require",
+    allowUnauthorizedCerts: false,
+    sshTunnel: false,
+    maxConnections: 10,
+  })
+}}
 ```
 
 The **n8n** node needs an n8n API key with the `credential:create` scope, and the n8n API is not included in every n8n plan. You can find the whole workflow in [`examples/4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json).
@@ -257,23 +264,19 @@ The node only creates, changes, or deletes something when an operation that you 
 
 ## Troubleshooting
 
-**Prisma did not accept the service token.** The token is incomplete or has been revoked, so create a new one under **Settings > Service Tokens** in Prisma Console.
+The table below lists the messages you are most likely to run into, along with what causes each one and how to resolve it.
 
-**The service token is not allowed to do this.** The project or database belongs to another workspace, and you need a token from that workspace to manage it.
-
-**Prisma could not find the requested resource.** Check the ID, because the project, database, or connection may already have been deleted.
-
-**Prisma rate limit reached.** The node sent too many requests in a short time and has already retried, so wait a moment before you run it again.
-
-**Database is still provisioning after 120 seconds.** The database was created and simply needs more time, which you can follow with **Database > Get**.
-
-**The Postgres node cannot connect.** Make sure **SSL** is set to **Require** in the Postgres credential, and then check the host, user, and password.
-
-**`expected N dimensions, not M`.** The `embedding` column does not fit your embedding model, as explained in [Match the table to your embedding model](#match-the-table-to-your-embedding-model).
-
-**`type "vector" does not exist`.** The pgvector extension is not enabled in this database yet, which you can fix by running `CREATE EXTENSION IF NOT EXISTS vector;` in a Postgres node.
-
-**A dropdown is empty.** The workspace has no projects or databases yet, so create one with **Project > Create** first.
+| What you see                                     | What to do                                                                                                                                                                  |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prisma did not accept the service token          | The token is incomplete or has been revoked, so create a new one under **Settings > Service Tokens** in Prisma Console and update the credential.                           |
+| The service token is not allowed to do this      | The project or database belongs to another workspace, which means you need a token from that workspace to manage it.                                                        |
+| Prisma could not find the requested resource     | Check the ID you entered, because the project, database, or connection may already have been deleted.                                                                       |
+| Prisma rate limit reached                        | The node sent too many requests in a short time and has already retried, so wait a moment before you run it again.                                                          |
+| Database is still provisioning after 120 seconds | The database was created and simply needs more time, which you can follow with **Database > Get**.                                                                          |
+| The Postgres node cannot connect                 | Make sure **SSL** is set to **Require** in the Postgres credential, and then check the host, user, and password.                                                            |
+| `expected N dimensions, not M`                   | The `embedding` column does not fit your embedding model, so adjust it as described in [Match the table to your embedding model](#match-the-table-to-your-embedding-model). |
+| `type "vector" does not exist`                   | The pgvector extension is not enabled in this database yet, which you can fix by running `CREATE EXTENSION IF NOT EXISTS vector;` in a Postgres node.                       |
+| A dropdown is empty                              | The workspace has no projects or databases yet, so create one with **Project > Create** first.                                                                              |
 
 ## Limitations
 
@@ -291,8 +294,13 @@ The node was tested with n8n 2.47.4, and the package has no runtime dependencies
 Issues and pull requests are welcome. To work on the node locally, install the dependencies and start n8n with the node loaded:
 
 ```bash
+# Install dependencies
 npm install
-npm run dev     # starts n8n on http://localhost:5678 with this node
+
+# Start n8n on http://localhost:5678 with this node loaded
+npm run dev
+
+# Run the unit tests
 npm test
 ```
 
