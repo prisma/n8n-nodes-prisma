@@ -266,17 +266,17 @@ The node only creates, changes, or deletes something when an operation that you 
 
 The table below lists the messages you are most likely to run into, along with what causes each one and how to resolve it.
 
-| What you see                                     | What to do                                                                                                                                                                  |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Prisma did not accept the service token          | The token is incomplete or has been revoked, so create a new one under **Settings > Service Tokens** in Prisma Console and update the credential.                           |
-| The service token is not allowed to do this      | The project or database belongs to another workspace, which means you need a token from that workspace to manage it.                                                        |
-| Prisma could not find the requested resource     | Check the ID you entered, because the project, database, or connection may already have been deleted.                                                                       |
-| Prisma rate limit reached                        | The node sent too many requests in a short time and has already retried, so wait a moment before you run it again.                                                          |
-| Database is still provisioning after 120 seconds | The database was created and simply needs more time, which you can follow with **Database > Get**.                                                                          |
-| The Postgres node cannot connect                 | Make sure **SSL** is set to **Require** in the Postgres credential, and then check the host, user, and password.                                                            |
-| `expected N dimensions, not M`                   | The `embedding` column does not fit your embedding model, so adjust it as described in [Match the table to your embedding model](#match-the-table-to-your-embedding-model). |
-| `type "vector" does not exist`                   | The pgvector extension is not enabled in this database yet, which you can fix by running `CREATE EXTENSION IF NOT EXISTS vector;` in a Postgres node.                       |
-| A dropdown is empty                              | The workspace has no projects or databases yet, so create one with **Project > Create** first.                                                                              |
+| What you see                                     | What to do                                                                                                                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prisma did not accept the service token          | The token is incomplete or has been revoked, so create a new one under **Settings > Service Tokens** in Prisma Console and update the credential.                                                       |
+| The service token is not allowed to do this      | The project or database belongs to another workspace, which means you need a token from that workspace to manage it.                                                                                    |
+| Prisma could not find the requested resource     | Check the ID you entered, because the project, database, or connection may already have been deleted.                                                                                                   |
+| Prisma rate limit reached                        | The node sent too many requests in a short time and has already retried, so wait a moment before you run it again.                                                                                      |
+| Database is still provisioning after 120 seconds | The database was created and needs more time to become ready, so you can either check its status with **Database > Get** or turn off **Wait Until Ready** to let the workflow continue without waiting. |
+| The Postgres node cannot connect                 | Make sure **SSL** is set to **Require** in the Postgres credential, and then check the host, user, and password.                                                                                        |
+| `expected N dimensions, not M`                   | The `embedding` column does not fit your embedding model, so adjust it as described in [Match the table to your embedding model](#match-the-table-to-your-embedding-model).                             |
+| `type "vector" does not exist`                   | The pgvector extension is not enabled in this database yet, which you can fix by running `CREATE EXTENSION IF NOT EXISTS vector;` in a Postgres node.                                                   |
+| A dropdown is empty                              | The workspace has no projects or databases yet, so create one with **Project > Create** first.                                                                                                          |
 
 ## Limitations
 

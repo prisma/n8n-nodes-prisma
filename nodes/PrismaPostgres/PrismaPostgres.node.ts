@@ -81,7 +81,7 @@ async function waitForDatabase(
 				{
 					itemIndex,
 					description:
-						'The database was created. Check its status with the Get operation, or turn off Wait Until Ready.',
+						'The database was created and needs more time to become ready, so check its status with the Get operation or turn off Wait Until Ready to continue without waiting.',
 				},
 			);
 		}
