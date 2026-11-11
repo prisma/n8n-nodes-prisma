@@ -1,70 +1,78 @@
 # n8n-nodes-prisma
 
-An [n8n](https://n8n.io) community node for [Prisma Postgres](https://www.prisma.io/postgres). Create and manage Prisma Postgres projects, databases and connections from a workflow, then use the database with n8n's own Postgres and AI nodes.
+This is an n8n community node. It lets you create and manage [Prisma Postgres](https://www.prisma.io/postgres) databases in your n8n workflows.
 
-The node handles provisioning. Queries, pgvector search and embeddings stay with the nodes n8n already ships: **Postgres**, **Postgres PGVector Store**, and the embeddings nodes for Gemini and OpenAI.
+Prisma Postgres is a managed PostgreSQL database with built-in connection pooling and support for pgvector. This node covers provisioning: projects, databases, and connection credentials. For queries, vector search, and embeddings, you keep using the nodes n8n already ships, such as Postgres and Postgres PGVector Store.
 
-- [Installation](#installation)
-- [Credentials](#credentials)
-- [Operations](#operations)
-- [Walkthrough: from nothing to a queryable database](#walkthrough-from-nothing-to-a-queryable-database)
-- [Connect n8n's Postgres node](#connect-n8ns-postgres-node)
-- [pgvector](#pgvector)
-- [Example workflows](#example-workflows)
-- [Security](#security)
-- [Troubleshooting](#troubleshooting)
-- [Known limitations](#known-limitations)
-- [What was tested](#what-was-tested)
-- [Development](#development)
+[n8n](https://n8n.io/) is a [fair-code licensed](https://docs.n8n.io/sustainable-use-license/) workflow automation platform.
+
+[Installation](#installation) · [Operations](#operations) · [Credentials](#credentials) · [Compatibility](#compatibility) · [Usage](#usage) · [Example workflows](#example-workflows) · [Security](#security) · [Troubleshooting](#troubleshooting) · [Known limitations](#known-limitations) · [Development](#development) · [Resources](#resources) · [Version history](#version-history)
 
 ## Installation
 
-Self-hosted n8n: open **Settings > Community Nodes**, select **Install**, and enter `n8n-nodes-prisma`. The [n8n community nodes guide](https://docs.n8n.io/integrations/community-nodes/installation/) covers the other install methods.
+Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
+
+On a self-hosted instance, open **Settings > Community Nodes**, select **Install**, and enter `n8n-nodes-prisma`. After the install finishes, search the node panel for **Prisma Postgres**.
 
 n8n Cloud only offers verified community nodes. This package is prepared for verification and has not been submitted yet.
 
-After installing, search the node panel for **Prisma Postgres**.
+## Operations
+
+| Resource   | Operations                    |
+| ---------- | ----------------------------- |
+| Workspace  | Get, Get Many                 |
+| Project    | Create, Get, Get Many, Delete |
+| Database   | Create, Get, Get Many, Delete |
+| Connection | Create, Get Many, Delete      |
+
+**Project: Create** also creates the project's first database, unless you turn that off. **Database: Create** adds another database to an existing project. Both wait until the database is ready before they return.
+
+**Connection: Create** generates database credentials. It is the operation that returns a password, and its output uses the field names of n8n's Postgres credential.
+
+**Delete** operations are permanent. Deleting a project removes all of its databases, and deleting a connection revokes its credentials.
+
+Every **Get Many** operation has **Return All** and **Limit** and follows the API's pagination. Projects, databases, and workspaces can be picked from a searchable list or set by ID with an expression. Each input item is processed separately, and every output item is linked to the input item that produced it.
+
+The node can also be used as a tool by an AI Agent. Be careful with that: a service token can delete projects.
 
 ## Credentials
 
-The node uses a Prisma workspace **service token**.
+The node authenticates with a Prisma workspace service token.
 
 1. Open [Prisma Console](https://console.prisma.io) and select your workspace.
 2. Go to **Settings > Service Tokens** and create a token.
 3. In n8n, create a **Prisma API** credential and paste the token into **Service Token**.
-4. Select **Test**. The test lists your workspaces. It never creates anything.
+4. Select **Test**.
 
-A service token can manage every project in its workspace, including deleting them. Treat it like a password and use a separate workspace for experiments.
+The test lists your workspaces and never creates anything.
 
-## Operations
+A service token can manage every project in its workspace. Treat it like a password, and use a separate workspace for experiments.
 
-| Resource   | Operation | What it does                                                           |
-| ---------- | --------- | ---------------------------------------------------------------------- |
-| Workspace  | Get       | Returns one workspace                                                  |
-| Workspace  | Get Many  | Lists the workspaces the token can access                              |
-| Project    | Create    | Creates a project, with a Prisma Postgres database by default          |
-| Project    | Get       | Returns one project                                                    |
-| Project    | Get Many  | Lists projects                                                         |
-| Project    | Delete    | Deletes a project and all of its databases                             |
-| Database   | Create    | Creates a database in a project and waits until it is ready            |
-| Database   | Get       | Returns one database with its status and region                        |
-| Database   | Get Many  | Lists databases, optionally for one project                            |
-| Database   | Delete    | Deletes a database and its data                                        |
-| Connection | Create    | Creates database credentials and returns host, user, password and URLs |
-| Connection | Get Many  | Lists connection metadata, without passwords                           |
-| Connection | Delete    | Deletes a connection and revokes its credentials                       |
+## Compatibility
 
-Good to know:
+Developed and tested with n8n 2.47.4. The package requires Node.js 20.19 or later and has no runtime dependencies.
 
-- Projects, workspaces and databases are picked from searchable lists, or by ID with an expression.
-- **Get Many** has **Return All** and **Limit** and follows the API's cursor pagination.
-- Each input item is processed separately and every output item is linked to the input item that produced it.
-- Rate-limited requests (HTTP 429) are retried up to three times and honor `Retry-After`. Gateway errors are retried for reads only, so a retry can never create a second database.
-- The node can be used as a tool by an AI Agent. Think twice before giving an agent a token that can delete projects.
+The tests cover the following:
 
-### Connection: Create output
+- 60 unit tests for authentication, request construction, pagination, validation, error handling, retries, multiple items, and secret handling.
+- The pgvector schema and every example query, run against a real Prisma Postgres database.
+- Loading the packed node in n8n, including the credential test and the dropdowns.
+- The database steps of the example workflows, run in n8n against a real Prisma Postgres database.
 
-The output uses the same field names as n8n's Postgres credential:
+Two areas are not verified yet:
+
+- **Operations with a valid service token.** They are covered by unit tests against the documented API responses, but the live test in `test/integration/management-api.test.ts` has not been run.
+- **Third-party nodes in the examples.** The Gmail, Notion, Gemini, and OpenAI nodes need accounts for those services. Their node types, versions, and parameters were checked against n8n 2.47.4, and the database steps ran with stand-in embeddings and sample input.
+
+## Usage
+
+### Create a database
+
+1. Add a **Prisma Postgres** node and select **Project > Create**. Give the project a name and pick a region.
+2. Add a second **Prisma Postgres** node and select **Connection > Create**. Set **Database** to **By ID** and enter the expression `{{ $json.database.id }}`.
+3. Run the workflow.
+
+The first node returns the project and its database. The second node returns the connection details:
 
 ```json
 {
@@ -84,67 +92,75 @@ The output uses the same field names as n8n's Postgres credential:
 }
 ```
 
-**Endpoint Type** selects which endpoint the top-level `host`, `port` and `connectionString` point to. **Pooled** suits workflows that run often or in parallel. **Direct** suits schema changes and long transactions. Both are always included.
+**Endpoint Type** decides which endpoint the top-level `host`, `port`, and `connectionString` point to. Choose **Pooled** for workflows that run often or in parallel, and **Direct** for schema changes and long transactions. The output always includes both.
 
-## Walkthrough: from nothing to a queryable database
+To add a database to a project you already have, use **Database > Create** and select the project from the list.
 
-1. Add a **Prisma API** credential ([Credentials](#credentials)).
-2. Add a **Prisma Postgres** node with **Project > Create**. Give it a name and a region. This creates the project and its first database, and waits until the database is ready.
-3. Add a second **Prisma Postgres** node with **Connection > Create**. Set **Database** to **By ID** with the expression `{{ $json.database.id }}`.
-4. Run the workflow. The second node returns host, port, database, user and password.
-5. Create a **Postgres** credential from those values ([next section](#connect-n8ns-postgres-node)).
-6. Use the credential in a **Postgres** node to create tables and query data.
+### Connect the Postgres node
 
-To add a database to an existing project, use **Database > Create** and select the project from the list.
+A community node cannot create or change the credentials of another node, so the connection details have to reach a Postgres credential in one of three ways. All three were tested on n8n 2.47.4.
 
-[`examples/1-create-database.json`](examples/1-create-database.json) contains steps 2 to 4.
+#### Copy the values once
 
-## Connect n8n's Postgres node
+This is the recommended way for a database you keep using.
 
-A community node cannot create or change credentials of other nodes. n8n does not expose that to nodes. There are three supported ways to get the connection details into a Postgres credential. All three were tested on n8n 2.47.4.
+Create a **Postgres** credential and copy `host`, `database`, `user`, `password`, and `port` from the **Connection > Create** output into the fields of the same name. Set **SSL** to **Require** and leave **Ignore SSL Issues** off.
 
-### Option 1: copy the values once (recommended)
+Afterwards, delete the execution that shows the password.
 
-Create a **Postgres** credential and copy these fields from the **Connection > Create** output:
+#### Let a workflow create the credential
 
-| Postgres credential field | Value       |
-| ------------------------- | ----------- |
-| Host                      | `host`      |
-| Database                  | `database`  |
-| User                      | `user`      |
-| Password                  | `password`  |
-| Port                      | `port`      |
-| SSL                       | **Require** |
+n8n's built-in **n8n** node can create credentials through the n8n API. Add it after **Connection > Create** with these settings:
 
-Leave **Ignore SSL Issues** off. Then delete the execution that shows the password.
+- **Resource:** Credential
+- **Operation:** Create
+- **Credential Type:** `postgres`
+- **Data:** the expression below
 
-### Option 2: let a workflow create the credential
+```text
+{{ JSON.stringify({
+	host: $json.host,
+	port: $json.port,
+	database: $json.database,
+	user: $json.user,
+	password: $json.password,
+	ssl: "require",
+	allowUnauthorizedCerts: false,
+	sshTunnel: false,
+	maxConnections: 10
+}) }}
+```
 
-n8n's built-in **n8n** node can create credentials through the n8n API. Chain it after **Connection > Create**:
+This needs an n8n API key with the `credential:create` scope, and the n8n API is not available on every plan. The complete workflow is in [`examples/4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json).
 
-- **Resource**: Credential, **Operation**: Create
-- **Credential Type**: `postgres`
-- **Data**: `{{ JSON.stringify({ host: $json.host, port: $json.port, database: $json.database, user: $json.user, password: $json.password, ssl: "require", allowUnauthorizedCerts: false, sshTunnel: false, maxConnections: 10 }) }}`
+#### Read the connection from the previous node
 
-This needs an n8n API key with the `credential:create` scope. The n8n API is not available on every plan. [`examples/4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json) is the complete workflow.
+Postgres credential fields accept expressions. Create a Postgres credential with these values:
 
-### Option 3: a credential that reads from the previous node
+| Field    | Value                  |
+| -------- | ---------------------- |
+| Host     | `{{ $json.host }}`     |
+| Database | `{{ $json.database }}` |
+| User     | `{{ $json.user }}`     |
+| Password | `{{ $json.password }}` |
+| Port     | `{{ $json.port }}`     |
+| SSL      | Require                |
 
-Postgres credential fields accept expressions. A credential with **Host** `{{ $json.host }}`, **Database** `{{ $json.database }}`, **User** `{{ $json.user }}`, **Password** `{{ $json.password }}`, **Port** `{{ $json.port }}` and **SSL** Require connects to whatever database the incoming item describes.
+A Postgres node that uses this credential connects to whichever database the incoming item describes. That suits workflows that create a database and use it in the same run, such as one database per customer.
 
-Use this for workflows that provision a database and use it in the same run, such as one database per customer. The item that reaches the Postgres node must contain the connection fields, and the password is stored with the execution data.
+The item that reaches the Postgres node must contain the connection fields, and the password is stored with the execution data.
 
-## pgvector
+### Use pgvector
 
-Prisma Postgres ships the `vector` extension. On 2026-11-11 a new database ran PostgreSQL 17.2 and offered pgvector 0.8.1. Enable it once per database:
+Prisma Postgres includes the `vector` extension. On 2026-11-11, a new database ran PostgreSQL 17.2 and offered pgvector 0.8.1. Enable the extension once per database:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-### Reference schema
+#### Reference schema
 
-[`sql/schema.sql`](sql/schema.sql) creates a `documents` table for AI context. Run it once with a Postgres node (**Execute Query**) or with `psql`.
+[`sql/schema.sql`](sql/schema.sql) creates a `documents` table for AI context. Run it once with a Postgres node set to **Execute Query**, or with `psql`.
 
 | Column        | Type           | Purpose                                              |
 | ------------- | -------------- | ---------------------------------------------------- |
@@ -153,15 +169,17 @@ CREATE EXTENSION IF NOT EXISTS vector;
 | `metadata`    | `jsonb`        | Anything you want to filter on                       |
 | `embedding`   | `vector(1536)` | The embedding                                        |
 | `document_id` | `text`         | Source document ID, read from `metadata.document_id` |
-| `source`      | `text`         | Where it came from, read from `metadata.source`      |
+| `source`      | `text`         | Origin of the text, read from `metadata.source`      |
 | `created_at`  | `timestamptz`  | Set on insert                                        |
 | `updated_at`  | `timestamptz`  | Set by a trigger on every update                     |
 
-`document_id` and `source` are generated from `metadata`. That keeps the table compatible with n8n's **Postgres PGVector Store** node, which only writes content, metadata and embedding. In that node, set **Table Name** to `documents` and, under **Options > Column Names**, set **Content Column Name** to `content`.
+The `document_id` and `source` columns are generated from `metadata`. This keeps the table compatible with n8n's **Postgres PGVector Store** node, which only writes content, metadata, and the embedding.
 
-### Match the embedding size to your model
+To use the table with that node, set **Table Name** to `documents`. Then open **Options > Column Names** and set **Content Column Name** to `content`.
 
-The column size must equal the size of the vectors your model returns. An insert with the wrong size fails with `expected 1536 dimensions, not 3072`.
+#### Embedding size
+
+The size of the `embedding` column must match the size of the vectors your model returns. An insert with the wrong size fails with a message such as `expected 1536 dimensions, not 3072`.
 
 | Model                                   | Size | Column         |
 | --------------------------------------- | ---- | -------------- |
@@ -170,16 +188,18 @@ The column size must equal the size of the vectors your model returns. An insert
 | Google `gemini-embedding-001` (default) | 3072 | `vector(3072)` |
 | Google `text-embedding-004`             | 768  | `vector(768)`  |
 
-n8n's **Embeddings Google Gemini** node has no setting for the output size, so `gemini-embedding-001` arrives at 3072. n8n's **Embeddings OpenAI** node has a **Dimensions** option.
+n8n's **Embeddings OpenAI** node has a **Dimensions** option. The **Embeddings Google Gemini** node has no such setting, so `gemini-embedding-001` arrives at 3072.
 
-pgvector cannot build an HNSW index on a `vector` column above 2000 dimensions. For 3072 you have two choices:
+pgvector cannot build an HNSW index on a `vector` column above 2000 dimensions. For 3072 dimensions, you have two choices:
 
-- Skip the vector index. Search is then exact and scans the table, which is fine for thousands of rows. The Gemini example does this.
-- Index a half-precision cast, as in [`sql/schema-3072.sql`](sql/schema-3072.sql). Queries must use the same cast, so this works with SQL in the Postgres node and not with the PGVector Store node.
+- **Skip the vector index.** Search is then exact and scans the table, which is fine for thousands of rows. The Gemini example works this way.
+- **Index a half-precision cast**, as shown in [`sql/schema-3072.sql`](sql/schema-3072.sql). Queries must use the same cast, so this works with SQL in the Postgres node and not with the PGVector Store node.
 
-### Example queries
+#### Queries
 
-[`sql/queries.sql`](sql/queries.sql) has parameterized statements for the Postgres node: insert, replace a document, similarity search, filtered search and update. A similarity search looks like this:
+[`sql/queries.sql`](sql/queries.sql) contains parameterized statements for the Postgres node: insert a chunk, replace a document, search by similarity, search with a metadata filter, and update a chunk.
+
+A similarity search looks like this:
 
 ```sql
 SELECT id, document_id, source, content, metadata,
@@ -189,91 +209,88 @@ ORDER BY embedding <=> $1::vector
 LIMIT $2;
 ```
 
-In the Postgres node, set **Options > Query Parameters** to an expression that returns an array, for example `{{ [ JSON.stringify($json.embedding), 5 ] }}`. The array form is safe for values that contain commas.
+In the Postgres node, set **Options > Query Parameters** to an expression that returns an array:
+
+```text
+{{ [ JSON.stringify($json.embedding), 5 ] }}
+```
+
+The array form is safe for values that contain commas.
 
 ## Example workflows
 
-Import a file with **Workflows > Import from File**, then select your own credentials on the nodes.
+The [`examples`](examples) folder contains four workflows. Import one with **Workflows > Import from File**, then select your own credentials on its nodes.
 
-| File                                                                                                        | What it shows                                                        |
-| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [`1-create-database.json`](examples/1-create-database.json)                                                 | Manual Trigger > create project and database > create connection     |
-| [`2-accounts-inbox-gemini.json`](examples/2-accounts-inbox-gemini.json)                                     | Email > Gemini embeddings > context from Prisma Postgres > AI review |
-| [`3-notion-policy-knowledge-base.json`](examples/3-notion-policy-knowledge-base.json)                       | Notion > OpenAI embeddings > Prisma Postgres > chat with retrieval   |
-| [`4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json) | Provision a database and save a Postgres credential automatically    |
+| File                                                                                                        | Description                                               |
+| ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`1-create-database.json`](examples/1-create-database.json)                                                 | Create a project, a database, and a connection            |
+| [`2-accounts-inbox-gemini.json`](examples/2-accounts-inbox-gemini.json)                                     | Triage an accounts inbox with Gemini and pgvector         |
+| [`3-notion-policy-knowledge-base.json`](examples/3-notion-policy-knowledge-base.json)                       | Sync Notion policies and answer questions with OpenAI     |
+| [`4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json) | Create a database and save a matching Postgres credential |
 
 ### Accounts inbox with pgvector and Gemini
 
-For an accounts@ inbox where most emails and bills can be triaged automatically.
+This workflow is for an accounts inbox where most emails and bills can be triaged automatically. It has two parts.
 
-- **Setup row**, run once: creates `accounts_context` and `inbox_suggestions`, then embeds a few sample context notes with Gemini and stores them. Replace the samples with your vendor notes, payment rules and past decisions.
-- **Inbox row**, for every new email: the Gmail Trigger passes the email and its attachments to an AI Agent that runs on Gemini. The agent must search `accounts_context` first, through a PGVector Store tool with Gemini embeddings. It returns a structured analysis: category, vendor, amount, due date, suggested action, confidence, and whether a person has to review it.
-- The analysis is saved to `inbox_suggestions`. Rows that need a person get the status `pending_review` and go to a placeholder node that you replace with Slack, email or a form.
+The setup part runs once. It creates the `accounts_context` and `inbox_suggestions` tables, embeds a few sample notes with Gemini, and stores them. Replace the samples with your own vendor notes, payment rules, and past decisions.
 
-The workflow never pays, replies or deletes. It only writes suggestions.
+The inbox part runs for every new email. A Gmail Trigger passes the email and its attachments to an AI Agent that runs on Gemini. The agent first searches `accounts_context` through a PGVector Store tool, then returns a structured analysis with the category, vendor, amount, due date, suggested action, and confidence. It also states whether a person has to review the email.
+
+The analysis is saved to `inbox_suggestions`. Rows that need a person get the status `pending_review` and continue to a placeholder node, which you replace with Slack, email, or a form.
+
+The workflow never pays, replies, or deletes anything. It only writes suggestions.
 
 ### Notion policy knowledge base
 
-For keeping company policies searchable and for drafting updates with their context.
+This workflow keeps company policies searchable and helps draft updates with the right context. It also has two parts.
 
-- **Sync row**, nightly or on demand: reads every page of a Notion database, collects the page text, removes the previous version of that policy from `policy_documents`, and stores the new chunks with OpenAI embeddings. Running it twice does not duplicate rows.
-- **Ask row**: a chat backed by an AI Agent on an OpenAI model. The agent must search `policy_documents` first and answers with the policy title and link. Asked for a policy change, it returns a draft for review. Nothing is written back to Notion.
+The sync part runs every night or on demand. It reads every page of a Notion database, collects the page text, removes the previous version of that policy from `policy_documents`, and stores the new chunks with OpenAI embeddings. Running it twice does not duplicate rows.
 
-### Verification status of the examples
-
-| Part                                                                                  | Status                                                                                             |
-| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| All four files import, and every node type, version and parameter exists              | Verified on n8n 2.47.4                                                                             |
-| Schema creation, PGVector Store insert and retrieval, SQL nodes, branching, sync loop | Executed in n8n against a real Prisma Postgres database, with stand-in embeddings and sample input |
-| Creating a Postgres credential with the n8n node (example 4, last node)               | Executed in n8n                                                                                    |
-| Prisma Postgres nodes in examples 1 and 4 with a valid token                          | **Unverified.** Needs a service token.                                                             |
-| Gmail Trigger, Notion nodes, Gemini and OpenAI models and embeddings                  | **Unverified.** Need accounts for those services. Field names follow the n8n node source.          |
+The ask part is a chat backed by an AI Agent on an OpenAI model. The agent searches `policy_documents` before it answers and names the policy title and link for each statement. When you ask for a policy change, it returns a draft for review. Nothing is written back to Notion.
 
 ## Security
 
-- The service token is stored in n8n's encrypted credential store, sent only as an `Authorization` header to `https://api.prisma.io`, and never written to output or error messages.
-- Passwords and connection strings leave the node only from **Connection > Create**, or from **Project > Create** and **Database > Create** when you turn on **Include Connection Details**. All other operations remove them from the API response.
-- n8n stores node output with the execution. After creating a connection, delete the execution, or set **Save successful production executions** to **Do not save** in the workflow settings.
-- Dropdowns and the credential test only send read requests.
-- **Delete** operations are permanent. Do not connect them to untrusted input.
-- To revoke database access, delete the connection with **Connection > Delete**.
-- The package has no runtime dependencies and does not read environment variables or files.
+**Service token.** The token is stored in n8n's encrypted credential store. It is sent only as an `Authorization` header to `https://api.prisma.io` and never appears in output or error messages.
+
+**Database passwords.** Passwords and connection strings leave the node only from **Connection > Create**. **Project > Create** and **Database > Create** include them only when you turn on **Include Connection Details**. All other operations remove them from the API response.
+
+**Execution data.** n8n stores node output with each execution. After you create a connection, delete that execution or turn off saving of successful executions in the workflow settings.
+
+**Revoking access.** Delete the connection with **Connection > Delete**.
+
+**Read-only helpers.** Dropdowns and the credential test only send read requests. A resource is created, changed, or deleted only when an operation that you selected runs.
+
+**Retries.** Rate-limited requests are retried up to three times and respect the `Retry-After` header. Gateway errors are retried for read requests only, so a retry cannot create a second database.
 
 ## Troubleshooting
 
-| Message                                                       | What to do                                                                                                      |
-| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Prisma did not accept the service token                       | The token is incomplete or revoked. Create a new one under **Settings > Service Tokens**.                       |
-| The service token is not allowed to do this                   | The resource belongs to another workspace. Use a token from that workspace.                                     |
-| Prisma could not find the requested resource                  | Check the ID. The resource may already be deleted.                                                              |
-| Prisma rate limit reached                                     | The node already retried. Wait, or process fewer items per run.                                                 |
-| Database is still provisioning after 120 seconds              | The database exists. Check it with **Database > Get**, or turn off **Wait Until Ready**.                        |
-| Postgres node cannot connect                                  | Set **SSL** to **Require** in the Postgres credential and check host, user and password.                        |
-| `expected N dimensions, not M`                                | The embedding column does not match your model. See [embedding sizes](#match-the-embedding-size-to-your-model). |
-| `column cannot have more than 2000 dimensions for hnsw index` | See the note on 3072 dimensions above.                                                                          |
-| `type "vector" does not exist`                                | Run `CREATE EXTENSION IF NOT EXISTS vector;` first.                                                             |
-| The dropdown is empty                                         | The token has no projects yet. Create one with **Project > Create**.                                            |
+**Prisma did not accept the service token.** The token is incomplete or revoked. Create a new one under **Settings > Service Tokens** in Prisma Console.
+
+**The service token is not allowed to do this.** The resource belongs to another workspace. Use a token from that workspace.
+
+**Prisma could not find the requested resource.** Check the ID. The resource may already be deleted.
+
+**Prisma rate limit reached.** The node already retried the request. Wait a moment, or process fewer items per run.
+
+**Database is still provisioning after 120 seconds.** The database exists. Check its status with **Database > Get**, or turn off **Wait Until Ready**.
+
+**The Postgres node cannot connect.** Set **SSL** to **Require** in the Postgres credential, then check the host, user, and password.
+
+**`expected N dimensions, not M`.** The `embedding` column does not match your model. See [Embedding size](#embedding-size).
+
+**`column cannot have more than 2000 dimensions for hnsw index`.** See the note on 3072 dimensions in [Embedding size](#embedding-size).
+
+**`type "vector" does not exist`.** Run `CREATE EXTENSION IF NOT EXISTS vector;` first.
+
+**A dropdown is empty.** The workspace has no projects or databases yet. Create one with **Project > Create**.
 
 ## Known limitations
 
-- The node covers Prisma Postgres only. Prisma Compute, backups, usage metrics and connection rotation are not included.
-- It cannot create an n8n Postgres credential by itself. See [Connect n8n's Postgres node](#connect-n8ns-postgres-node).
-- Read operations never return passwords. If you lose one, create a new connection.
+- The node covers Prisma Postgres only. Prisma Compute, backups, usage metrics, and credential rotation are not included.
+- The node cannot create an n8n Postgres credential by itself. See [Connect the Postgres node](#connect-the-postgres-node).
+- Read operations never return passwords. If you lose a password, create a new connection.
 - Searching a dropdown by name scans at most 1000 entries, because the API has no name filter.
-- OAuth is not supported. Authentication is by service token.
-- Operations against the Management API with a valid token have unit tests against the documented response shapes, and no live test run yet. See [What was tested](#what-was-tested).
-
-## What was tested
-
-| Check                                                                                                             | Result                                    |
-| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Unit tests: auth, request construction, mapping, pagination, validation, errors, retries, multiple items, secrets | 60 passing                                |
-| `n8n-node lint` (strict, n8n Cloud rules), Prettier, type check, build                                            | Passing                                   |
-| pgvector schema and every statement in `sql/queries.sql` on real Prisma Postgres                                  | 9 passing                                 |
-| Node loads in n8n 2.47.4 from the packed tarball, with icon, credential and AI tool variant                       | Verified                                  |
-| Credential test and dropdowns in n8n with an invalid token                                                        | Verified, clean message from the real API |
-| n8n Postgres credential against Prisma Postgres, pooled endpoint, SSL Require                                     | Verified                                  |
-| Live Management API test (`test/integration/management-api.test.ts`)                                              | **Not run.** Needs a service token.       |
+- Authentication is by service token. OAuth is not supported.
 
 ## Development
 
@@ -285,14 +302,18 @@ npm run lint
 npm run build
 ```
 
-[CONTRIBUTING.md](CONTRIBUTING.md) explains the integration tests and the rules that keep the package eligible for n8n verification.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains the integration tests, the release process, and the rules that keep the package eligible for n8n verification.
 
 ## Resources
 
+- [n8n community nodes documentation](https://docs.n8n.io/integrations/#community-nodes)
 - [Prisma Postgres documentation](https://www.prisma.io/docs/postgres)
-- [Prisma Management API](https://www.prisma.io/docs/rest-api)
+- [Prisma Management API reference](https://www.prisma.io/docs/rest-api)
 - [Connecting to Prisma Postgres](https://www.prisma.io/docs/postgres/database/connecting-to-your-database)
-- [n8n community nodes](https://docs.n8n.io/integrations/community-nodes/)
+
+## Version history
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
