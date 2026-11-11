@@ -1,0 +1,519 @@
+{
+	"name": "Notion policy knowledge base with pgvector and OpenAI",
+	"nodes": [
+		{
+			"parameters": {
+				"content": "## Notion policy knowledge base\n\nNotion policies > OpenAI embeddings > Prisma Postgres > semantic retrieval > AI answer.\n\n**Setup**\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it (SSL: Require).\n2. Add **Notion** and **OpenAI** credentials. Share the policies database with your Notion integration.\n3. Select the policies database in **Get policies**.\n4. Run **Run sync now** once. It creates the table and loads every policy.\n5. Open the chat to ask questions or draft policy updates.\n\n**Embedding size**\n`policy_documents.embedding` is `vector(1536)`, the size of `text-embedding-3-small`.\n\nAnswers and drafts are returned for review. Nothing is written back to Notion.",
+				"width": 400,
+				"height": 520,
+				"color": 7
+			},
+			"id": "00000000-0000-4000-8000-000000003001",
+			"name": "About",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-460, -420]
+		},
+		{
+			"parameters": {
+				"content": "### Sync: Notion to Prisma Postgres",
+				"width": 1900,
+				"height": 420,
+				"color": 5
+			},
+			"id": "00000000-0000-4000-8000-000000003002",
+			"name": "Sync row",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-20, -420]
+		},
+		{
+			"parameters": {
+				"rule": {
+					"interval": [
+						{
+							"triggerAtHour": 2
+						}
+					]
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000003003",
+			"name": "Every night",
+			"type": "n8n-nodes-base.scheduleTrigger",
+			"typeVersion": 1.4,
+			"position": [0, -340]
+		},
+		{
+			"parameters": {},
+			"id": "00000000-0000-4000-8000-000000003004",
+			"name": "Run sync now",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, -180]
+		},
+		{
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "CREATE EXTENSION IF NOT EXISTS vector;\n\nCREATE TABLE IF NOT EXISTS policy_documents (\n\tid          uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n\tcontent     text NOT NULL,\n\tmetadata    jsonb NOT NULL DEFAULT '{}'::jsonb,\n\tembedding   vector(1536) NOT NULL,\n\tdocument_id text GENERATED ALWAYS AS (metadata ->> 'document_id') STORED,\n\tsource      text GENERATED ALWAYS AS (metadata ->> 'source') STORED,\n\tcreated_at  timestamptz NOT NULL DEFAULT now(),\n\tupdated_at  timestamptz NOT NULL DEFAULT now()\n);\n\nCREATE INDEX IF NOT EXISTS policy_documents_embedding_idx\n\tON policy_documents USING hnsw (embedding vector_cosine_ops);\n\nCREATE INDEX IF NOT EXISTS policy_documents_document_id_idx ON policy_documents (document_id);\nCREATE INDEX IF NOT EXISTS policy_documents_source_idx ON policy_documents (source);\nCREATE INDEX IF NOT EXISTS policy_documents_metadata_idx ON policy_documents USING gin (metadata jsonb_path_ops);\n\nCREATE OR REPLACE FUNCTION policy_documents_set_updated_at() RETURNS trigger\nLANGUAGE plpgsql AS $$\nBEGIN\n\tNEW.updated_at = now();\n\tRETURN NEW;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS policy_documents_set_updated_at ON policy_documents;\nCREATE TRIGGER policy_documents_set_updated_at\n\tBEFORE UPDATE ON policy_documents\n\tFOR EACH ROW EXECUTE FUNCTION policy_documents_set_updated_at();",
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003005",
+			"name": "Create table",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.8,
+			"position": [220, -260],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"resource": "databasePage",
+				"operation": "getAll",
+				"databaseId": {
+					"__rl": true,
+					"mode": "list",
+					"value": ""
+				},
+				"returnAll": true,
+				"simple": true,
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003006",
+			"name": "Get policies",
+			"type": "n8n-nodes-base.notion",
+			"typeVersion": 2.2,
+			"position": [440, -260],
+			"credentials": {
+				"notionApi": {
+					"id": "REPLACE_ME",
+					"name": "Notion account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"parameters": {
+				"batchSize": 1,
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003007",
+			"name": "For each policy",
+			"type": "n8n-nodes-base.splitInBatches",
+			"typeVersion": 3,
+			"position": [660, -260]
+		},
+		{
+			"parameters": {
+				"resource": "block",
+				"operation": "getAll",
+				"blockId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $json.id }}"
+				},
+				"returnAll": true,
+				"fetchNestedBlocks": true,
+				"simplifyOutput": true
+			},
+			"id": "00000000-0000-4000-8000-000000003008",
+			"name": "Get policy text",
+			"type": "n8n-nodes-base.notion",
+			"typeVersion": 2.2,
+			"position": [880, -180],
+			"credentials": {
+				"notionApi": {
+					"id": "REPLACE_ME",
+					"name": "Notion account"
+				}
+			},
+			"alwaysOutputData": true
+		},
+		{
+			"parameters": {
+				"jsCode": "// One item per policy: the page fields plus the text of all its blocks.\nconst page = $('For each policy').first().json;\nconst text = $input.all().map((item) => item.json.content).filter(Boolean).join('\\n');\nreturn [{\n\tjson: {\n\t\tdocument_id: page.id,\n\t\ttitle: page.name ?? page.property_name ?? 'Untitled policy',\n\t\turl: page.url ?? '',\n\t\ttext: text || (page.name ?? ''),\n\t},\n}];"
+			},
+			"id": "00000000-0000-4000-8000-000000003009",
+			"name": "Policy document",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [1100, -180]
+		},
+		{
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "DELETE FROM policy_documents WHERE document_id = $1;",
+				"options": {
+					"queryReplacement": "={{ [ $json.document_id ] }}"
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000003010",
+			"name": "Remove old version",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.8,
+			"position": [1320, -180],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"mode": "insert",
+				"tableName": "policy_documents",
+				"options": {
+					"columnNames": {
+						"values": {
+							"idColumnName": "id",
+							"vectorColumnName": "embedding",
+							"contentColumnName": "content",
+							"metadataColumnName": "metadata"
+						}
+					}
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000003011",
+			"name": "Store policy",
+			"type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+			"typeVersion": 1.4,
+			"position": [1540, -180],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"model": "text-embedding-3-small",
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003012",
+			"name": "OpenAI embeddings (store)",
+			"type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+			"typeVersion": 1.2,
+			"position": [1500, 0],
+			"credentials": {
+				"openAiApi": {
+					"id": "REPLACE_ME",
+					"name": "OpenAi account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"jsonMode": "expressionData",
+				"jsonData": "={{ $('Policy document').item.json.text }}",
+				"options": {
+					"metadata": {
+						"metadataValues": [
+							{
+								"name": "document_id",
+								"value": "={{ $('Policy document').item.json.document_id }}"
+							},
+							{
+								"name": "source",
+								"value": "notion"
+							},
+							{
+								"name": "title",
+								"value": "={{ $('Policy document').item.json.title }}"
+							},
+							{
+								"name": "url",
+								"value": "={{ $('Policy document').item.json.url }}"
+							}
+						]
+					}
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000003013",
+			"name": "Policy loader",
+			"type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+			"typeVersion": 1.1,
+			"position": [1680, 0]
+		},
+		{
+			"parameters": {
+				"content": "### Ask: answer questions and draft updates",
+				"width": 1000,
+				"height": 560,
+				"color": 4
+			},
+			"id": "00000000-0000-4000-8000-000000003014",
+			"name": "Ask row",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-20, 240]
+		},
+		{
+			"parameters": {
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003016",
+			"name": "Chat",
+			"type": "@n8n/n8n-nodes-langchain.chatTrigger",
+			"typeVersion": 1.5,
+			"position": [0, 340],
+			"webhookId": "00000000-0000-4000-8000-000000003015"
+		},
+		{
+			"parameters": {
+				"options": {
+					"systemMessage": "You answer questions about company policies and draft policy updates.\nAlways search the policy knowledge base first and base your answer only on what it returns. Name the policy title and link for every statement. If the knowledge base has no answer, say so.\nWhen asked to change or write a policy, return a draft and list which existing policies it affects. A person reviews every draft before it is published.",
+					"forceToolCallOnFirstIteration": true
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000003017",
+			"name": "Policy assistant",
+			"type": "@n8n/n8n-nodes-langchain.agent",
+			"typeVersion": 3.1,
+			"position": [260, 340]
+		},
+		{
+			"parameters": {
+				"model": {
+					"__rl": true,
+					"mode": "list",
+					"value": "gpt-5-mini"
+				},
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003018",
+			"name": "OpenAI chat model",
+			"type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+			"typeVersion": 1.3,
+			"position": [180, 560],
+			"credentials": {
+				"openAiApi": {
+					"id": "REPLACE_ME",
+					"name": "OpenAi account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"mode": "retrieve-as-tool",
+				"toolDescription": "Searches the company policy knowledge base. Call it with the question or the topic of the policy.",
+				"tableName": "policy_documents",
+				"topK": 6,
+				"includeDocumentMetadata": true,
+				"options": {
+					"columnNames": {
+						"values": {
+							"idColumnName": "id",
+							"vectorColumnName": "embedding",
+							"contentColumnName": "content",
+							"metadataColumnName": "metadata"
+						}
+					}
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000003019",
+			"name": "Search policies",
+			"type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+			"typeVersion": 1.4,
+			"position": [400, 560],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"model": "text-embedding-3-small",
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000003020",
+			"name": "OpenAI embeddings (search)",
+			"type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+			"typeVersion": 1.2,
+			"position": [400, 700],
+			"credentials": {
+				"openAiApi": {
+					"id": "REPLACE_ME",
+					"name": "OpenAi account"
+				}
+			}
+		}
+	],
+	"connections": {
+		"Every night": {
+			"main": [
+				[
+					{
+						"node": "Create table",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Run sync now": {
+			"main": [
+				[
+					{
+						"node": "Create table",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create table": {
+			"main": [
+				[
+					{
+						"node": "Get policies",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get policies": {
+			"main": [
+				[
+					{
+						"node": "For each policy",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"For each policy": {
+			"main": [
+				[],
+				[
+					{
+						"node": "Get policy text",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get policy text": {
+			"main": [
+				[
+					{
+						"node": "Policy document",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Policy document": {
+			"main": [
+				[
+					{
+						"node": "Remove old version",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Remove old version": {
+			"main": [
+				[
+					{
+						"node": "Store policy",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"OpenAI embeddings (store)": {
+			"ai_embedding": [
+				[
+					{
+						"node": "Store policy",
+						"type": "ai_embedding",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Policy loader": {
+			"ai_document": [
+				[
+					{
+						"node": "Store policy",
+						"type": "ai_document",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Store policy": {
+			"main": [
+				[
+					{
+						"node": "For each policy",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Chat": {
+			"main": [
+				[
+					{
+						"node": "Policy assistant",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"OpenAI chat model": {
+			"ai_languageModel": [
+				[
+					{
+						"node": "Policy assistant",
+						"type": "ai_languageModel",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Search policies": {
+			"ai_tool": [
+				[
+					{
+						"node": "Policy assistant",
+						"type": "ai_tool",
+						"index": 0
+					}
+				]
+			]
+		},
+		"OpenAI embeddings (search)": {
+			"ai_embedding": [
+				[
+					{
+						"node": "Search policies",
+						"type": "ai_embedding",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"executionOrder": "v1"
+	}
+}

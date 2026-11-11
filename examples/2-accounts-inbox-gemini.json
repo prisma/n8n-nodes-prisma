@@ -1,0 +1,549 @@
+{
+	"name": "Accounts inbox with pgvector and Gemini",
+	"nodes": [
+		{
+			"parameters": {
+				"content": "## Accounts inbox with pgvector and Gemini\n\nIncoming email > retrieve context from Prisma Postgres > Gemini analysis > suggestion saved for review.\n\n**Setup**\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it (SSL: Require).\n2. Add **Google Gemini** and **Gmail** credentials.\n3. Run the **Setup** row once. It creates the tables and stores sample context.\n4. Activate the workflow.\n\n**Safety**\nThe workflow never pays, replies or deletes anything. It only writes a suggestion to `inbox_suggestions`. Rows that need a person get the status `pending_review`.\n\n**Embedding size**\n`accounts_context.embedding` is `vector(3072)`, the default size of `gemini-embedding-001`. If inserts report a different size, change the column to match.",
+				"width": 400,
+				"height": 560,
+				"color": 7
+			},
+			"id": "00000000-0000-4000-8000-000000002001",
+			"name": "About",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-460, -420]
+		},
+		{
+			"parameters": {
+				"content": "### Setup: run once",
+				"width": 1000,
+				"height": 250,
+				"color": 5
+			},
+			"id": "00000000-0000-4000-8000-000000002002",
+			"name": "Setup row",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-20, -420]
+		},
+		{
+			"parameters": {},
+			"id": "00000000-0000-4000-8000-000000002003",
+			"name": "Run setup",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, -340]
+		},
+		{
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "CREATE EXTENSION IF NOT EXISTS vector;\n\nCREATE TABLE IF NOT EXISTS accounts_context (\n\tid          uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n\tcontent     text NOT NULL,\n\tmetadata    jsonb NOT NULL DEFAULT '{}'::jsonb,\n\tembedding   vector(3072) NOT NULL,\n\tdocument_id text GENERATED ALWAYS AS (metadata ->> 'document_id') STORED,\n\tsource      text GENERATED ALWAYS AS (metadata ->> 'source') STORED,\n\tcreated_at  timestamptz NOT NULL DEFAULT now(),\n\tupdated_at  timestamptz NOT NULL DEFAULT now()\n);\n\nCREATE INDEX IF NOT EXISTS accounts_context_document_id_idx ON accounts_context (document_id);\nCREATE INDEX IF NOT EXISTS accounts_context_source_idx ON accounts_context (source);\nCREATE INDEX IF NOT EXISTS accounts_context_metadata_idx ON accounts_context USING gin (metadata jsonb_path_ops);\n\nCREATE OR REPLACE FUNCTION accounts_context_set_updated_at() RETURNS trigger\nLANGUAGE plpgsql AS $$\nBEGIN\n\tNEW.updated_at = now();\n\tRETURN NEW;\nEND;\n$$;\n\nDROP TRIGGER IF EXISTS accounts_context_set_updated_at ON accounts_context;\nCREATE TRIGGER accounts_context_set_updated_at\n\tBEFORE UPDATE ON accounts_context\n\tFOR EACH ROW EXECUTE FUNCTION accounts_context_set_updated_at();\n\nCREATE TABLE IF NOT EXISTS inbox_suggestions (\n\tid          uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n\tmessage_id  text NOT NULL UNIQUE,\n\tsender      text,\n\tsubject     text,\n\tstatus      text NOT NULL CHECK (status IN ('pending_review', 'suggested', 'approved', 'rejected')),\n\tanalysis    jsonb NOT NULL,\n\tcreated_at  timestamptz NOT NULL DEFAULT now(),\n\treviewed_at timestamptz,\n\treviewed_by text\n);",
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000002004",
+			"name": "Create tables",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.8,
+			"position": [220, -340],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"jsCode": "// Replace with your own vendor notes, past decisions and rules.\nreturn [\n\t{ content: 'Acme GmbH sends a hosting invoice at the start of every month. Typical amount 1100 to 1300 EUR. Pay within 30 days from the operating account.', document_id: 'vendor-acme', source: 'vendor-notes', vendor: 'Acme GmbH' },\n\t{ content: 'Any payment above 1000 EUR needs approval from the finance lead before it is scheduled.', document_id: 'rule-approval-limit', source: 'finance-rules', vendor: '' },\n\t{ content: 'Requests to change a vendor bank account are always verified by phone before any update. Never act on an emailed request alone.', document_id: 'rule-bank-changes', source: 'finance-rules', vendor: '' },\n].map((json) => ({ json }));"
+			},
+			"id": "00000000-0000-4000-8000-000000002005",
+			"name": "Sample context",
+			"type": "n8n-nodes-base.code",
+			"typeVersion": 2,
+			"position": [440, -340]
+		},
+		{
+			"parameters": {
+				"mode": "insert",
+				"tableName": "accounts_context",
+				"options": {
+					"columnNames": {
+						"values": {
+							"idColumnName": "id",
+							"vectorColumnName": "embedding",
+							"contentColumnName": "content",
+							"metadataColumnName": "metadata"
+						}
+					}
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002006",
+			"name": "Store context",
+			"type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+			"typeVersion": 1.4,
+			"position": [660, -340],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"modelName": "models/gemini-embedding-001"
+			},
+			"id": "00000000-0000-4000-8000-000000002007",
+			"name": "Gemini embeddings (store)",
+			"type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+			"typeVersion": 1,
+			"position": [620, -150],
+			"credentials": {
+				"googlePalmApi": {
+					"id": "REPLACE_ME",
+					"name": "Google Gemini(PaLM) Api account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"jsonMode": "expressionData",
+				"jsonData": "={{ $json.content }}",
+				"options": {
+					"metadata": {
+						"metadataValues": [
+							{
+								"name": "document_id",
+								"value": "={{ $json.document_id }}"
+							},
+							{
+								"name": "source",
+								"value": "={{ $json.source }}"
+							},
+							{
+								"name": "vendor",
+								"value": "={{ $json.vendor }}"
+							}
+						]
+					}
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002008",
+			"name": "Context loader",
+			"type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+			"typeVersion": 1.1,
+			"position": [800, -150]
+		},
+		{
+			"parameters": {
+				"content": "### Inbox: runs for every new email",
+				"width": 1440,
+				"height": 620,
+				"color": 4
+			},
+			"id": "00000000-0000-4000-8000-000000002009",
+			"name": "Inbox row",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-20, 60]
+		},
+		{
+			"parameters": {
+				"pollTimes": {
+					"item": [
+						{
+							"mode": "everyMinute"
+						}
+					]
+				},
+				"simple": false,
+				"filters": {
+					"readStatus": "unread"
+				},
+				"options": {
+					"downloadAttachments": true
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002010",
+			"name": "New email",
+			"type": "n8n-nodes-base.gmailTrigger",
+			"typeVersion": 1.4,
+			"position": [0, 160],
+			"credentials": {
+				"gmailOAuth2": {
+					"id": "REPLACE_ME",
+					"name": "Gmail account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"assignments": {
+					"assignments": [
+						{
+							"id": "00000000-0000-4000-8000-000000002011",
+							"name": "message_id",
+							"value": "={{ $json.id }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000002012",
+							"name": "sender",
+							"value": "={{ $json.from?.text ?? $json.From }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000002013",
+							"name": "subject",
+							"value": "={{ $json.subject ?? $json.Subject }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000002014",
+							"name": "body",
+							"value": "={{ ($json.text ?? $json.snippet ?? \"\").slice(0, 12000) }}",
+							"type": "string"
+						}
+					]
+				},
+				"options": {
+					"includeBinary": true
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002015",
+			"name": "Extract email content",
+			"type": "n8n-nodes-base.set",
+			"typeVersion": 3.5,
+			"position": [220, 160]
+		},
+		{
+			"parameters": {
+				"promptType": "define",
+				"text": "=From: {{ $json.sender }}\nSubject: {{ $json.subject }}\n\n{{ $json.body }}",
+				"hasOutputParser": true,
+				"options": {
+					"systemMessage": "You triage the accounts inbox of a company. For every email:\n1. Search the accounts context for the sender, the vendor and the type of request. Use what you find.\n2. Classify the email and extract amounts and dates. Attached invoices are provided as files.\n3. Suggest one next action for a person in the finance team.\n\nSet requires_human_review to true when money would move, when bank or contact details change, when the context is missing or contradicts the email, or when your confidence is below 0.8. You never take the action yourself.",
+					"passthroughBinaryImages": true,
+					"passthroughBinaryPdfs": true,
+					"forceToolCallOnFirstIteration": true
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002016",
+			"name": "Analyze email",
+			"type": "@n8n/n8n-nodes-langchain.agent",
+			"typeVersion": 3.1,
+			"position": [480, 160]
+		},
+		{
+			"parameters": {
+				"modelName": "models/gemini-2.5-flash",
+				"options": {
+					"temperature": 0.1
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002017",
+			"name": "Gemini chat model",
+			"type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+			"typeVersion": 1.2,
+			"position": [400, 400],
+			"credentials": {
+				"googlePalmApi": {
+					"id": "REPLACE_ME",
+					"name": "Google Gemini(PaLM) Api account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"mode": "retrieve-as-tool",
+				"toolDescription": "Searches stored accounts context: vendor notes, payment rules and past decisions. Call it with a short description of the email.",
+				"tableName": "accounts_context",
+				"topK": 5,
+				"includeDocumentMetadata": true,
+				"options": {
+					"columnNames": {
+						"values": {
+							"idColumnName": "id",
+							"vectorColumnName": "embedding",
+							"contentColumnName": "content",
+							"metadataColumnName": "metadata"
+						}
+					}
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002018",
+			"name": "Search accounts context",
+			"type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+			"typeVersion": 1.4,
+			"position": [560, 400],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"modelName": "models/gemini-embedding-001"
+			},
+			"id": "00000000-0000-4000-8000-000000002019",
+			"name": "Gemini embeddings (search)",
+			"type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+			"typeVersion": 1,
+			"position": [560, 560],
+			"credentials": {
+				"googlePalmApi": {
+					"id": "REPLACE_ME",
+					"name": "Google Gemini(PaLM) Api account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"schemaType": "fromJson",
+				"jsonSchemaExample": "{\n  \"category\": \"invoice\",\n  \"vendor\": \"Acme GmbH\",\n  \"amount\": 1250.5,\n  \"currency\": \"EUR\",\n  \"due_date\": \"2026-12-01\",\n  \"summary\": \"Invoice 4471 from Acme GmbH for November hosting.\",\n  \"suggested_action\": \"Schedule payment for 2026-11-28 from the operating account.\",\n  \"confidence\": 0.82,\n  \"requires_human_review\": true,\n  \"review_reasons\": [\n    \"Amount is above the 1000 EUR approval limit\"\n  ]\n}"
+			},
+			"id": "00000000-0000-4000-8000-000000002020",
+			"name": "Analysis format",
+			"type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+			"typeVersion": 1.3,
+			"position": [780, 400]
+		},
+		{
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "INSERT INTO inbox_suggestions (message_id, sender, subject, status, analysis)\nVALUES (\n\t$1, $2, $3,\n\tCASE WHEN ($4::jsonb ->> 'requires_human_review')::boolean THEN 'pending_review' ELSE 'suggested' END,\n\t$4::jsonb\n)\nON CONFLICT (message_id) DO UPDATE\n\tSET analysis = EXCLUDED.analysis, status = EXCLUDED.status\nRETURNING id, message_id, status, analysis ->> 'suggested_action' AS suggested_action;",
+				"options": {
+					"queryReplacement": "={{ [ $('Extract email content').item.json.message_id, $('Extract email content').item.json.sender, $('Extract email content').item.json.subject, JSON.stringify($json.output) ] }}"
+				}
+			},
+			"id": "00000000-0000-4000-8000-000000002021",
+			"name": "Save suggestion",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.8,
+			"position": [860, 160],
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"conditions": {
+					"options": {
+						"caseSensitive": true,
+						"leftValue": "",
+						"typeValidation": "strict",
+						"version": 3
+					},
+					"conditions": [
+						{
+							"id": "00000000-0000-4000-8000-000000002022",
+							"leftValue": "={{ $json.status }}",
+							"rightValue": "pending_review",
+							"operator": {
+								"type": "string",
+								"operation": "equals"
+							}
+						}
+					],
+					"combinator": "and"
+				},
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000002023",
+			"name": "Needs human review?",
+			"type": "n8n-nodes-base.if",
+			"typeVersion": 2.4,
+			"position": [1080, 160]
+		},
+		{
+			"parameters": {},
+			"id": "00000000-0000-4000-8000-000000002024",
+			"name": "Ask a person to review",
+			"type": "n8n-nodes-base.noOp",
+			"typeVersion": 1,
+			"position": [1300, 80],
+			"notes": "Replace with Slack, email or a form that sets status to approved or rejected.",
+			"notesInFlow": true
+		},
+		{
+			"parameters": {},
+			"id": "00000000-0000-4000-8000-000000002025",
+			"name": "Suggestion saved",
+			"type": "n8n-nodes-base.noOp",
+			"typeVersion": 1,
+			"position": [1300, 260]
+		}
+	],
+	"connections": {
+		"Run setup": {
+			"main": [
+				[
+					{
+						"node": "Create tables",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create tables": {
+			"main": [
+				[
+					{
+						"node": "Sample context",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Sample context": {
+			"main": [
+				[
+					{
+						"node": "Store context",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Gemini embeddings (store)": {
+			"ai_embedding": [
+				[
+					{
+						"node": "Store context",
+						"type": "ai_embedding",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Context loader": {
+			"ai_document": [
+				[
+					{
+						"node": "Store context",
+						"type": "ai_document",
+						"index": 0
+					}
+				]
+			]
+		},
+		"New email": {
+			"main": [
+				[
+					{
+						"node": "Extract email content",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Extract email content": {
+			"main": [
+				[
+					{
+						"node": "Analyze email",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Gemini chat model": {
+			"ai_languageModel": [
+				[
+					{
+						"node": "Analyze email",
+						"type": "ai_languageModel",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Search accounts context": {
+			"ai_tool": [
+				[
+					{
+						"node": "Analyze email",
+						"type": "ai_tool",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Gemini embeddings (search)": {
+			"ai_embedding": [
+				[
+					{
+						"node": "Search accounts context",
+						"type": "ai_embedding",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Analysis format": {
+			"ai_outputParser": [
+				[
+					{
+						"node": "Analyze email",
+						"type": "ai_outputParser",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Analyze email": {
+			"main": [
+				[
+					{
+						"node": "Save suggestion",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Save suggestion": {
+			"main": [
+				[
+					{
+						"node": "Needs human review?",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Needs human review?": {
+			"main": [
+				[
+					{
+						"node": "Ask a person to review",
+						"type": "main",
+						"index": 0
+					}
+				],
+				[
+					{
+						"node": "Suggestion saved",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"executionOrder": "v1"
+	}
+}

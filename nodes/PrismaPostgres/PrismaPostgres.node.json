@@ -1,0 +1,19 @@
+{
+	"node": "n8n-nodes-prisma.prismaPostgres",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Development", "Data & Storage"],
+	"alias": ["Prisma", "Postgres", "PostgreSQL", "pgvector", "Database", "SQL"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/prisma/n8n-nodes-prisma#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/prisma/n8n-nodes-prisma#readme"
+			}
+		]
+	}
+}

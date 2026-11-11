@@ -1,0 +1,188 @@
+{
+	"name": "Create a Prisma Postgres database",
+	"nodes": [
+		{
+			"parameters": {
+				"content": "## Create a Prisma Postgres database\n\n1. Add a **Prisma API** credential with a workspace service token.\n2. Run the workflow.\n3. Open **Create connection** and copy host, port, database, user and password into a new **Postgres** credential. Set **SSL** to **Require**.\n\nThe password is only shown by **Create connection**. **Database details** leaves it out so later nodes do not carry it around.\n\nEvery run creates a new project. Delete test projects with **Project > Delete**.",
+				"width": 380,
+				"height": 420,
+				"color": 7
+			},
+			"id": "00000000-0000-4000-8000-000000001001",
+			"name": "About",
+			"type": "n8n-nodes-base.stickyNote",
+			"typeVersion": 1,
+			"position": [-420, -260]
+		},
+		{
+			"parameters": {},
+			"id": "00000000-0000-4000-8000-000000001002",
+			"name": "When clicking ‘Execute workflow’",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0]
+		},
+		{
+			"parameters": {
+				"resource": "project",
+				"operation": "create",
+				"name": "n8n-ai-context",
+				"region": "us-east-1",
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000001003",
+			"name": "Create project and database",
+			"type": "n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [220, 0],
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"resource": "connection",
+				"operation": "create",
+				"databaseId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $json.database.id }}"
+				},
+				"name": "n8n",
+				"endpointType": "pooled"
+			},
+			"id": "00000000-0000-4000-8000-000000001004",
+			"name": "Create connection",
+			"type": "n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [440, 0],
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			}
+		},
+		{
+			"parameters": {
+				"assignments": {
+					"assignments": [
+						{
+							"id": "00000000-0000-4000-8000-000000001005",
+							"name": "projectId",
+							"value": "={{ $('Create project and database').item.json.id }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001006",
+							"name": "projectName",
+							"value": "={{ $('Create project and database').item.json.name }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001007",
+							"name": "databaseId",
+							"value": "={{ $json.databaseId }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001008",
+							"name": "databaseStatus",
+							"value": "={{ $('Create project and database').item.json.database.status }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001009",
+							"name": "region",
+							"value": "={{ $('Create project and database').item.json.database.region.id }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001010",
+							"name": "connectionId",
+							"value": "={{ $json.id }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001011",
+							"name": "host",
+							"value": "={{ $json.host }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001012",
+							"name": "port",
+							"value": "={{ $json.port }}",
+							"type": "number"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001013",
+							"name": "database",
+							"value": "={{ $json.database }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001014",
+							"name": "user",
+							"value": "={{ $json.user }}",
+							"type": "string"
+						},
+						{
+							"id": "00000000-0000-4000-8000-000000001015",
+							"name": "ssl",
+							"value": "={{ $json.ssl }}",
+							"type": "string"
+						}
+					]
+				},
+				"options": {}
+			},
+			"id": "00000000-0000-4000-8000-000000001016",
+			"name": "Database details",
+			"type": "n8n-nodes-base.set",
+			"typeVersion": 3.5,
+			"position": [660, 0]
+		}
+	],
+	"connections": {
+		"When clicking ‘Execute workflow’": {
+			"main": [
+				[
+					{
+						"node": "Create project and database",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create project and database": {
+			"main": [
+				[
+					{
+						"node": "Create connection",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create connection": {
+			"main": [
+				[
+					{
+						"node": "Database details",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {
+		"executionOrder": "v1"
+	}
+}

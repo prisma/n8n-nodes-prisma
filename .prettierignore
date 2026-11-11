@@ -1,0 +1,7 @@
+dist
+node_modules
+package-lock.json
+.agents
+AGENTS.md
+CLAUDE.md
+CHANGELOG.md
