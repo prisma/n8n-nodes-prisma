@@ -2,9 +2,8 @@
 
 ## 0.1.0
 
-Initial release.
+This is the first release of the Prisma Postgres node for n8n.
 
-- Prisma Postgres node with Workspace (Get, Get Many), Project (Create, Delete, Get, Get Many),
-  Database (Create, Delete, Get, Get Many) and Connection (Create, Delete, Get Many) operations.
-- Prisma API credential that uses a workspace service token.
-- Reference pgvector schema, example queries and three importable example workflows.
+- The **Prisma Postgres** node can list workspaces, and it can create, read, list, and delete projects, databases, and connections.
+- The **Prisma API** credential signs in with a workspace service token.
+- The repository includes a table definition for pgvector, example queries, and four example workflows that you can import into n8n.

@@ -3,16 +3,16 @@
 	"nodes": [
 		{
 			"parameters": {
-				"content": "## Create a Prisma Postgres database\n\n1. Add a **Prisma API** credential with a workspace service token.\n2. Run the workflow.\n3. Open **Create connection** and copy host, port, database, user and password into a new **Postgres** credential. Set **SSL** to **Require**.\n\nThe password is only shown by **Create connection**. **Database details** leaves it out so later nodes do not carry it around.\n\nEvery run creates a new project. Delete test projects with **Project > Delete**.",
-				"width": 380,
-				"height": 420,
+				"content": "## Create a Prisma Postgres database\n\nThis workflow creates a project with its first database and then generates the credentials you need to connect to it.\n\n**How to use it**\n\n1. Add a **Prisma API** credential that holds a workspace service token.\n2. Run the workflow.\n3. Open **Create connection** and copy the host, port, database, user and password into a new **Postgres** credential, with **SSL** set to **Require**.\n\nThe password only appears in **Create connection**, and **Database details** leaves it out so that later nodes do not carry it around.\n\nKeep in mind that every run creates a new project, which you can remove again with **Project > Delete**.",
+				"width": 440,
+				"height": 560,
 				"color": 7
 			},
 			"id": "00000000-0000-4000-8000-000000001001",
 			"name": "About",
 			"type": "n8n-nodes-base.stickyNote",
 			"typeVersion": 1,
-			"position": [-420, -260]
+			"position": [-500, -280]
 		},
 		{
 			"parameters": {},

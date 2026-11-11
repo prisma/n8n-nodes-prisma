@@ -30,27 +30,27 @@ const STATUS_GUIDANCE: Record<number, { message: string; description: string }> 
 	401: {
 		message: 'Prisma did not accept the service token',
 		description:
-			'Check that the service token in the Prisma API credential is complete and has not been revoked. Create a new one in Prisma Console under Workspace Settings > Service Tokens.',
+			'The service token in the Prisma API credential is incomplete or has been revoked, so create a new one in Prisma Console under Settings > Service Tokens and update the credential.',
 	},
 	403: {
 		message: 'The service token is not allowed to do this',
 		description:
-			'The token belongs to a different workspace or lacks access to this resource. Use a service token from the workspace that owns it.',
+			'The token belongs to a different workspace or has no access to this resource, so use a service token from the workspace that owns it.',
 	},
 	404: {
 		message: 'Prisma could not find the requested resource',
 		description:
-			'Check the ID. The resource may have been deleted, or it belongs to a workspace this service token cannot access.',
+			'Check the ID, because the resource may have been deleted or may belong to a workspace that this service token cannot access.',
 	},
 	409: {
 		message: 'This conflicts with an existing Prisma resource',
 		description:
-			'A resource with the same identifier already exists, or it is in a state that does not allow this operation.',
+			'A resource with the same identifier already exists, or the resource is in a state that does not allow this operation.',
 	},
 	429: {
 		message: 'Prisma rate limit reached',
 		description:
-			'The request was retried and is still rate limited. Wait a moment, then run the node again, or lower the number of items per run.',
+			'The request was retried and is still rate limited, so wait a moment before you run the node again or process fewer items per run.',
 	},
 };
 

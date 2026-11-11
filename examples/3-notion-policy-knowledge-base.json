@@ -3,16 +3,16 @@
 	"nodes": [
 		{
 			"parameters": {
-				"content": "## Notion policy knowledge base\n\nNotion policies > OpenAI embeddings > Prisma Postgres > semantic retrieval > AI answer.\n\n**Setup**\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it (SSL: Require).\n2. Add **Notion** and **OpenAI** credentials. Share the policies database with your Notion integration.\n3. Select the policies database in **Get policies**.\n4. Run **Run sync now** once. It creates the table and loads every policy.\n5. Open the chat to ask questions or draft policy updates.\n\n**Embedding size**\n`policy_documents.embedding` is `vector(1536)`, the size of `text-embedding-3-small`.\n\nAnswers and drafts are returned for review. Nothing is written back to Notion.",
-				"width": 400,
-				"height": 520,
+				"content": "## Notion policy knowledge base\n\nPolicies from Notion are stored in Prisma Postgres with OpenAI embeddings, so that a chat can answer questions about them and draft updates.\n\n**Setup**\n\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it, with **SSL** set to **Require**.\n2. Add your **Notion** and **OpenAI** credentials, and share the policies database with your Notion integration.\n3. Select the policies database in **Get policies**.\n4. Run **Run sync now** once, which creates the table and loads every policy.\n5. Open the chat to ask questions or to draft a policy update.\n\n**Embedding size**\n\nThe `embedding` column of `policy_documents` is `vector(1536)`, which is the size of `text-embedding-3-small`.\n\nAnswers and drafts are returned for you to review, and nothing is written back to Notion.",
+				"width": 460,
+				"height": 800,
 				"color": 7
 			},
 			"id": "00000000-0000-4000-8000-000000003001",
 			"name": "About",
 			"type": "n8n-nodes-base.stickyNote",
 			"typeVersion": 1,
-			"position": [-460, -420]
+			"position": [-520, -420]
 		},
 		{
 			"parameters": {
@@ -134,7 +134,7 @@
 		},
 		{
 			"parameters": {
-				"jsCode": "// One item per policy: the page fields plus the text of all its blocks.\nconst page = $('For each policy').first().json;\nconst text = $input.all().map((item) => item.json.content).filter(Boolean).join('\\n');\nreturn [{\n\tjson: {\n\t\tdocument_id: page.id,\n\t\ttitle: page.name ?? page.property_name ?? 'Untitled policy',\n\t\turl: page.url ?? '',\n\t\ttext: text || (page.name ?? ''),\n\t},\n}];"
+				"jsCode": "// Builds one item per policy that combines the page fields with the text of all its blocks.\nconst page = $('For each policy').first().json;\nconst text = $input.all().map((item) => item.json.content).filter(Boolean).join('\\n');\nreturn [{\n\tjson: {\n\t\tdocument_id: page.id,\n\t\ttitle: page.name ?? page.property_name ?? 'Untitled policy',\n\t\turl: page.url ?? '',\n\t\ttext: text || (page.name ?? ''),\n\t},\n}];"
 			},
 			"id": "00000000-0000-4000-8000-000000003009",
 			"name": "Policy document",

@@ -1,15 +1,22 @@
--- Reference schema for AI context on Prisma Postgres with pgvector.
--- Run once per database with n8n's Postgres node (Execute Query) or psql.
+-- A table for AI context on Prisma Postgres, with pgvector for similarity search.
 --
--- The embedding column size must match your embedding model:
---   1536  OpenAI text-embedding-3-small (default size)
---   1536  Google gemini-embedding-001 with output dimensionality set to 1536
---   768   Google text-embedding-004, or gemini-embedding-001 reduced to 768
---   3072  OpenAI text-embedding-3-large, or gemini-embedding-001 at its default size.
---         See schema-3072.sql: a plain vector index stops at 2000 dimensions.
+-- Run this file once per database, either in n8n's Postgres node with the Execute Query
+-- operation or with psql. It is safe to run again, because every statement checks whether
+-- its object already exists.
 --
--- The table works with n8n's Postgres PGVector Store node (columns id, content,
--- metadata, embedding) and with plain SQL through the Postgres node.
+-- The size of the embedding column has to match the embedding model you use. The file
+-- uses 1536, which fits OpenAI text-embedding-3-small. Change vector(1536) below if your
+-- model produces a different size:
+--
+--   768    Google text-embedding-004
+--   1536   OpenAI text-embedding-3-small
+--   3072   OpenAI text-embedding-3-large and Google gemini-embedding-001
+--
+-- For 3072, also remove the documents_embedding_idx statement, because pgvector can only
+-- build that index for sizes up to 2000. The file schema-3072.sql shows an alternative.
+--
+-- The table works with n8n's Postgres PGVector Store node, which writes the id, content,
+-- metadata and embedding columns, and equally well with plain SQL in the Postgres node.
 
 CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -18,21 +25,22 @@ CREATE TABLE IF NOT EXISTS documents (
 	content     text NOT NULL,
 	metadata    jsonb NOT NULL DEFAULT '{}'::jsonb,
 	embedding   vector(1536) NOT NULL,
-	-- Read from metadata, so rows written by the PGVector Store node fill them too.
+	-- These two columns are read from metadata, so that rows written by the PGVector Store
+	-- node fill them as well.
 	document_id text GENERATED ALWAYS AS (metadata ->> 'document_id') STORED,
 	source      text GENERATED ALWAYS AS (metadata ->> 'source') STORED,
 	created_at  timestamptz NOT NULL DEFAULT now(),
 	updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
--- Approximate nearest neighbour search by cosine distance.
+-- Keeps similarity search fast as the table grows, using cosine distance.
 CREATE INDEX IF NOT EXISTS documents_embedding_idx
 	ON documents USING hnsw (embedding vector_cosine_ops);
 
--- Replace or delete all chunks of one source document.
+-- Make it quick to replace or delete every row that belongs to one source document.
 CREATE INDEX IF NOT EXISTS documents_document_id_idx ON documents (document_id);
 CREATE INDEX IF NOT EXISTS documents_source_idx ON documents (source);
--- Metadata filters such as metadata @> '{"vendor": "Acme"}'.
+-- Supports filters on metadata, such as metadata @> '{"vendor": "Acme"}'.
 CREATE INDEX IF NOT EXISTS documents_metadata_idx ON documents USING gin (metadata jsonb_path_ops);
 
 CREATE OR REPLACE FUNCTION documents_set_updated_at() RETURNS trigger

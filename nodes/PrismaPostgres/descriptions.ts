@@ -73,7 +73,7 @@ const includeConnectionDetails: INodeProperties = {
 	type: 'boolean',
 	default: false,
 	description:
-		'Whether to output the database password and connection strings of the default connection. They are then visible in the execution data of this workflow.',
+		'Whether to output the password and connection strings of the default connection, which then become visible in the execution data of this workflow',
 };
 
 const endpointType: INodeProperties = {
@@ -85,17 +85,18 @@ const endpointType: INodeProperties = {
 			name: 'Pooled',
 			value: 'pooled',
 			description:
-				'Connection pooling by Prisma. Best for workflows that run often or in parallel.',
+				'Shares database connections between runs, which suits workflows that run often or in parallel',
 		},
 		{
 			name: 'Direct',
 			value: 'direct',
-			description: 'A direct Postgres connection. Use for schema changes and long transactions.',
+			description:
+				'Connects straight to the database, which suits schema changes and long transactions',
 		},
 	],
 	default: 'pooled',
 	description:
-		'Which endpoint the top-level host, port and connection string fields point to. Both endpoints are always included in the output.',
+		'The endpoint that the host, port and connection string fields point to, with both endpoints always included in the output',
 };
 
 const waitUntilReady: INodeProperties = {
@@ -275,7 +276,7 @@ export const fields: INodeProperties[] = [
 		typeOptions: { loadOptionsMethod: 'getRegions' },
 		default: 'us-east-1',
 		description:
-			'Where the project and its default database are hosted. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+			'The region that hosts the project and its default database. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 		displayOptions: { show: { resource: ['project'], operation: ['create'] } },
 	},
 	{
@@ -303,7 +304,7 @@ export const fields: INodeProperties[] = [
 				typeOptions: { loadOptionsMethod: 'getWorkspaces' },
 				default: '',
 				description:
-					'The workspace to create the project in. Defaults to the workspace of the service token. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+					'The workspace to create the project in, which defaults to the workspace of the service token. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 		],
 	},
@@ -345,7 +346,7 @@ export const fields: INodeProperties[] = [
 		typeOptions: { loadOptionsMethod: 'getDatabaseRegions' },
 		default: 'inherit',
 		description:
-			'Where the database is hosted. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+			'The region that hosts the database, which defaults to the region of the project. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 		displayOptions: { show: { resource: ['database'], operation: ['create'] } },
 	},
 	{
@@ -423,7 +424,7 @@ export const fields: INodeProperties[] = [
 	},
 	{
 		displayName:
-			'The output contains the database password. Anyone who can view executions of this workflow can read it. Copy the values into a Postgres credential, then turn off saving of execution data or delete the execution.',
+			'The output contains the database password, which anyone who can view executions of this workflow can read. After you copy the values into a Postgres credential, delete the execution or turn off saving of execution data.',
 		name: 'secretNotice',
 		type: 'notice',
 		default: '',
@@ -436,7 +437,8 @@ export const fields: INodeProperties[] = [
 		required: true,
 		default: '',
 		placeholder: 'e.g. con_cmb1x2y3z0000abcd1234efgh',
-		description: 'The ID of the connection to delete. Use Get Many to find it.',
+		description:
+			'The ID of the connection to delete, which you can find with the Get Many operation',
 		displayOptions: { show: { resource: ['connection'], operation: ['delete'] } },
 	},
 	...returnAll({ resource: ['connection'], operation: ['getAll'] }),

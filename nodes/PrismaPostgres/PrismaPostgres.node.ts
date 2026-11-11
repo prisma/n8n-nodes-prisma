@@ -106,7 +106,7 @@ async function waitForDatabase(
 			{
 				itemIndex,
 				description:
-					'Delete the database and create it again. If this keeps happening, contact Prisma support.',
+					'Delete the database and create it again, and contact Prisma support if the same thing keeps happening.',
 			},
 		);
 	}
@@ -153,7 +153,7 @@ function requireId(
 	if (id === '') {
 		throw new NodeOperationError(context.getNode(), `No ${label} was provided`, {
 			itemIndex,
-			description: `Select a ${label} from the list or enter its ID.`,
+			description: `Select a ${label} from the list, or switch to By ID and enter its ID.`,
 		});
 	}
 	return encodeURIComponent(id);

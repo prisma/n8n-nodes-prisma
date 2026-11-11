@@ -80,10 +80,10 @@ function createDatabase() {
 	const nodes = [
 		note(
 			'About',
-			[-420, -260],
-			380,
-			420,
-			'## Create a Prisma Postgres database\n\n1. Add a **Prisma API** credential with a workspace service token.\n2. Run the workflow.\n3. Open **Create connection** and copy host, port, database, user and password into a new **Postgres** credential. Set **SSL** to **Require**.\n\nThe password is only shown by **Create connection**. **Database details** leaves it out so later nodes do not carry it around.\n\nEvery run creates a new project. Delete test projects with **Project > Delete**.',
+			[-500, -280],
+			440,
+			560,
+			'## Create a Prisma Postgres database\n\nThis workflow creates a project with its first database and then generates the credentials you need to connect to it.\n\n**How to use it**\n\n1. Add a **Prisma API** credential that holds a workspace service token.\n2. Run the workflow.\n3. Open **Create connection** and copy the host, port, database, user and password into a new **Postgres** credential, with **SSL** set to **Require**.\n\nThe password only appears in **Create connection**, and **Database details** leaves it out so that later nodes do not carry it around.\n\nKeep in mind that every run creates a new project, which you can remove again with **Project > Delete**.',
 		),
 		node('When clicking ‘Execute workflow’', 'n8n-nodes-base.manualTrigger', 1, [0, 0]),
 		node(
@@ -194,10 +194,10 @@ function accountsInbox() {
 	const nodes = [
 		note(
 			'About',
-			[-460, -420],
-			400,
-			560,
-			'## Accounts inbox with pgvector and Gemini\n\nIncoming email > retrieve context from Prisma Postgres > Gemini analysis > suggestion saved for review.\n\n**Setup**\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it (SSL: Require).\n2. Add **Google Gemini** and **Gmail** credentials.\n3. Run the **Setup** row once. It creates the tables and stores sample context.\n4. Activate the workflow.\n\n**Safety**\nThe workflow never pays, replies or deletes anything. It only writes a suggestion to `inbox_suggestions`. Rows that need a person get the status `pending_review`.\n\n**Embedding size**\n`accounts_context.embedding` is `vector(3072)`, the default size of `gemini-embedding-001`. If inserts report a different size, change the column to match.',
+			[-520, -420],
+			460,
+			820,
+			'## Accounts inbox with pgvector and Gemini\n\nEvery new email is analyzed by Gemini with the help of context stored in Prisma Postgres, and the result is saved as a suggestion for a person to review.\n\n**Setup**\n\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it, with **SSL** set to **Require**.\n2. Add your **Google Gemini** and **Gmail** credentials.\n3. Run the **Setup** row once, which creates the tables and stores a few sample notes.\n4. Activate the workflow.\n\n**Safety**\n\nThe workflow never pays, replies or deletes anything, because all it does is write a suggestion to `inbox_suggestions`. Suggestions that need a person get the status `pending_review`.\n\n**Embedding size**\n\nThe `embedding` column of `accounts_context` is `vector(3072)`, which is the default size of `gemini-embedding-001`. If an insert reports a different size, change the column so that it matches.',
 		),
 		note('Setup row', [-20, -420], 1000, 250, '### Setup: run once', 5),
 		node('Run setup', 'n8n-nodes-base.manualTrigger', 1, [0, -340]),
@@ -214,7 +214,7 @@ function accountsInbox() {
 			POSTGRES,
 		),
 		node('Sample context', 'n8n-nodes-base.code', 2, [440, -340], {
-			jsCode: `// Replace with your own vendor notes, past decisions and rules.
+			jsCode: `// Sample context to get started. Replace it with your own vendor notes, payment rules and past decisions.
 return [
 	{ content: 'Acme GmbH sends a hosting invoice at the start of every month. Typical amount 1100 to 1300 EUR. Pay within 30 days from the operating account.', document_id: 'vendor-acme', source: 'vendor-notes', vendor: 'Acme GmbH' },
 	{ content: 'Any payment above 1000 EUR needs approval from the finance lead before it is scheduled.', document_id: 'rule-approval-limit', source: 'finance-rules', vendor: '' },
@@ -292,7 +292,7 @@ return [
 		vectorStore('Search accounts context', [560, 400], {
 			mode: 'retrieve-as-tool',
 			toolDescription:
-				'Searches stored accounts context: vendor notes, payment rules and past decisions. Call it with a short description of the email.',
+				'Searches the stored accounts context, which holds vendor notes, payment rules and past decisions. Call it with a short description of the email.',
 			tableName: 'accounts_context',
 			topK: 5,
 			includeDocumentMetadata: true,
@@ -347,7 +347,8 @@ return [
 			[1300, 80],
 			{},
 			{
-				notes: 'Replace with Slack, email or a form that sets status to approved or rejected.',
+				notes:
+					'Replace this node with Slack, email or a form that lets a person set the status to approved or rejected.',
 				notesInFlow: true,
 			},
 		),
@@ -400,10 +401,10 @@ function policyKnowledgeBase() {
 	const nodes = [
 		note(
 			'About',
-			[-460, -420],
-			400,
-			520,
-			'## Notion policy knowledge base\n\nNotion policies > OpenAI embeddings > Prisma Postgres > semantic retrieval > AI answer.\n\n**Setup**\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it (SSL: Require).\n2. Add **Notion** and **OpenAI** credentials. Share the policies database with your Notion integration.\n3. Select the policies database in **Get policies**.\n4. Run **Run sync now** once. It creates the table and loads every policy.\n5. Open the chat to ask questions or draft policy updates.\n\n**Embedding size**\n`policy_documents.embedding` is `vector(1536)`, the size of `text-embedding-3-small`.\n\nAnswers and drafts are returned for review. Nothing is written back to Notion.',
+			[-520, -420],
+			460,
+			800,
+			'## Notion policy knowledge base\n\nPolicies from Notion are stored in Prisma Postgres with OpenAI embeddings, so that a chat can answer questions about them and draft updates.\n\n**Setup**\n\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it, with **SSL** set to **Require**.\n2. Add your **Notion** and **OpenAI** credentials, and share the policies database with your Notion integration.\n3. Select the policies database in **Get policies**.\n4. Run **Run sync now** once, which creates the table and loads every policy.\n5. Open the chat to ask questions or to draft a policy update.\n\n**Embedding size**\n\nThe `embedding` column of `policy_documents` is `vector(1536)`, which is the size of `text-embedding-3-small`.\n\nAnswers and drafts are returned for you to review, and nothing is written back to Notion.',
 		),
 		note('Sync row', [-20, -420], 1900, 420, '### Sync: Notion to Prisma Postgres', 5),
 		node('Every night', 'n8n-nodes-base.scheduleTrigger', 1.4, [0, -340], {
@@ -453,7 +454,7 @@ function policyKnowledgeBase() {
 			{ ...NOTION, alwaysOutputData: true },
 		),
 		node('Policy document', 'n8n-nodes-base.code', 2, [1100, -180], {
-			jsCode: `// One item per policy: the page fields plus the text of all its blocks.
+			jsCode: `// Builds one item per policy that combines the page fields with the text of all its blocks.
 const page = $('For each policy').first().json;
 const text = $input.all().map((item) => item.json.content).filter(Boolean).join('\\n');
 return [{
@@ -563,10 +564,10 @@ function createDatabaseAndCredential() {
 	const nodes = [
 		note(
 			'About',
-			[-420, -260],
-			380,
-			460,
-			'## Create a database and its Postgres credential\n\nProvisions Prisma Postgres, then saves a ready-to-use **Postgres** credential in this n8n instance. Nothing needs to be copied by hand.\n\n**Setup**\n1. Add a **Prisma API** credential.\n2. Create an n8n API key under **Settings > n8n API** with the scope `credential:create`, and add it as an **n8n API** credential.\n3. Run the workflow, then select the new credential in any Postgres or PGVector Store node.\n\nThe n8n API is not available on every n8n plan. If you cannot use it, follow example 1 and copy the values.\n\nThe database password passes through this execution. Delete the execution afterwards, or turn off saving of successful executions for this workflow.',
+			[-500, -280],
+			440,
+			600,
+			'## Create a database and its Postgres credential\n\nThis workflow creates a Prisma Postgres database and then saves a ready-to-use **Postgres** credential in this n8n instance, so nothing has to be copied by hand.\n\n**Setup**\n\n1. Add a **Prisma API** credential.\n2. Create an n8n API key under **Settings > n8n API** with the scope `credential:create`, and add it as an **n8n API** credential.\n3. Run the workflow, and then select the new credential in any Postgres or PGVector Store node.\n\nThe n8n API is not available on every n8n plan, so if you cannot use it, follow example 1 and copy the values instead.\n\nBecause the database password passes through this execution, the workflow is set to not save successful executions.',
 		),
 		node('When clicking ‘Execute workflow’', 'n8n-nodes-base.manualTrigger', 1, [0, 0]),
 		node(

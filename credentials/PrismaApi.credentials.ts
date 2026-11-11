@@ -24,7 +24,7 @@ export class PrismaApi implements ICredentialType {
 			default: '',
 			required: true,
 			description:
-				'A Prisma workspace service token. Create one in Prisma Console under Workspace Settings > Service Tokens.',
+				'A service token for your Prisma workspace, which you can create in Prisma Console under Settings > Service Tokens',
 		},
 	];
 

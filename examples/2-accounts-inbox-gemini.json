@@ -3,16 +3,16 @@
 	"nodes": [
 		{
 			"parameters": {
-				"content": "## Accounts inbox with pgvector and Gemini\n\nIncoming email > retrieve context from Prisma Postgres > Gemini analysis > suggestion saved for review.\n\n**Setup**\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it (SSL: Require).\n2. Add **Google Gemini** and **Gmail** credentials.\n3. Run the **Setup** row once. It creates the tables and stores sample context.\n4. Activate the workflow.\n\n**Safety**\nThe workflow never pays, replies or deletes anything. It only writes a suggestion to `inbox_suggestions`. Rows that need a person get the status `pending_review`.\n\n**Embedding size**\n`accounts_context.embedding` is `vector(3072)`, the default size of `gemini-embedding-001`. If inserts report a different size, change the column to match.",
-				"width": 400,
-				"height": 560,
+				"content": "## Accounts inbox with pgvector and Gemini\n\nEvery new email is analyzed by Gemini with the help of context stored in Prisma Postgres, and the result is saved as a suggestion for a person to review.\n\n**Setup**\n\n1. Create a database with the Prisma Postgres node and add a **Postgres** credential for it, with **SSL** set to **Require**.\n2. Add your **Google Gemini** and **Gmail** credentials.\n3. Run the **Setup** row once, which creates the tables and stores a few sample notes.\n4. Activate the workflow.\n\n**Safety**\n\nThe workflow never pays, replies or deletes anything, because all it does is write a suggestion to `inbox_suggestions`. Suggestions that need a person get the status `pending_review`.\n\n**Embedding size**\n\nThe `embedding` column of `accounts_context` is `vector(3072)`, which is the default size of `gemini-embedding-001`. If an insert reports a different size, change the column so that it matches.",
+				"width": 460,
+				"height": 820,
 				"color": 7
 			},
 			"id": "00000000-0000-4000-8000-000000002001",
 			"name": "About",
 			"type": "n8n-nodes-base.stickyNote",
 			"typeVersion": 1,
-			"position": [-460, -420]
+			"position": [-520, -420]
 		},
 		{
 			"parameters": {
@@ -55,7 +55,7 @@
 		},
 		{
 			"parameters": {
-				"jsCode": "// Replace with your own vendor notes, past decisions and rules.\nreturn [\n\t{ content: 'Acme GmbH sends a hosting invoice at the start of every month. Typical amount 1100 to 1300 EUR. Pay within 30 days from the operating account.', document_id: 'vendor-acme', source: 'vendor-notes', vendor: 'Acme GmbH' },\n\t{ content: 'Any payment above 1000 EUR needs approval from the finance lead before it is scheduled.', document_id: 'rule-approval-limit', source: 'finance-rules', vendor: '' },\n\t{ content: 'Requests to change a vendor bank account are always verified by phone before any update. Never act on an emailed request alone.', document_id: 'rule-bank-changes', source: 'finance-rules', vendor: '' },\n].map((json) => ({ json }));"
+				"jsCode": "// Sample context to get started. Replace it with your own vendor notes, payment rules and past decisions.\nreturn [\n\t{ content: 'Acme GmbH sends a hosting invoice at the start of every month. Typical amount 1100 to 1300 EUR. Pay within 30 days from the operating account.', document_id: 'vendor-acme', source: 'vendor-notes', vendor: 'Acme GmbH' },\n\t{ content: 'Any payment above 1000 EUR needs approval from the finance lead before it is scheduled.', document_id: 'rule-approval-limit', source: 'finance-rules', vendor: '' },\n\t{ content: 'Requests to change a vendor bank account are always verified by phone before any update. Never act on an emailed request alone.', document_id: 'rule-bank-changes', source: 'finance-rules', vendor: '' },\n].map((json) => ({ json }));"
 			},
 			"id": "00000000-0000-4000-8000-000000002005",
 			"name": "Sample context",
@@ -257,7 +257,7 @@
 		{
 			"parameters": {
 				"mode": "retrieve-as-tool",
-				"toolDescription": "Searches stored accounts context: vendor notes, payment rules and past decisions. Call it with a short description of the email.",
+				"toolDescription": "Searches the stored accounts context, which holds vendor notes, payment rules and past decisions. Call it with a short description of the email.",
 				"tableName": "accounts_context",
 				"topK": 5,
 				"includeDocumentMetadata": true,
@@ -368,7 +368,7 @@
 			"type": "n8n-nodes-base.noOp",
 			"typeVersion": 1,
 			"position": [1300, 80],
-			"notes": "Replace with Slack, email or a form that sets status to approved or rejected.",
+			"notes": "Replace this node with Slack, email or a form that lets a person set the status to approved or rejected.",
 			"notesInFlow": true
 		},
 		{

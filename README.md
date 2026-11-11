@@ -84,7 +84,7 @@ In n8n, create a new **Postgres** credential, copy `host`, `database`, `user`, `
 
 Keep in mind that the output of step 3 contains a password and that n8n keeps node output in the execution history, so it is worth deleting that execution once you have saved the credential.
 
-If you would rather start from a ready-made workflow, you can import these steps from [`examples/1-create-database.json`](examples/1-create-database.json).
+If you would rather start from a ready-made workflow, you can import these steps from the [create a database example](examples/1-create-database.json).
 
 ## Operations
 
@@ -182,14 +182,14 @@ The `$1` and `$2` placeholders are filled from **Options > Query Parameters** in
 
 The [`examples`](examples) folder has four workflows you can import. In n8n, open **Workflows > Import from File**, choose a file, and then select your own credentials on the nodes.
 
-| File                                                                                                        | What it does                                              |
-| ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| [`1-create-database.json`](examples/1-create-database.json)                                                 | Creates a project, a database, and a connection           |
-| [`2-accounts-inbox-gemini.json`](examples/2-accounts-inbox-gemini.json)                                     | Triages an accounts inbox with Gemini                     |
-| [`3-notion-policy-knowledge-base.json`](examples/3-notion-policy-knowledge-base.json)                       | Answers questions about policies stored in Notion         |
-| [`4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json) | Creates a database and saves a Postgres credential for it |
+| Workflow                                                                            | What it does                                              |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [Create a database](examples/1-create-database.json)                                | Creates a project, a database, and a connection           |
+| [Accounts inbox](examples/2-accounts-inbox-gemini.json)                             | Triages an accounts inbox with Gemini                     |
+| [Policy knowledge base](examples/3-notion-policy-knowledge-base.json)               | Answers questions about policies stored in Notion         |
+| [Database with credential](examples/4-create-database-and-postgres-credential.json) | Creates a database and saves a Postgres credential for it |
 
-Examples 2 and 3 use Gmail, Notion, Google Gemini, and OpenAI, so you need accounts for those services. Their database steps were tested against Prisma Postgres, but the steps that call those services were not, so please check them with your own accounts before you rely on them.
+The accounts inbox and the policy knowledge base use Gmail, Notion, Google Gemini, and OpenAI, so you need accounts for those services. Their database steps were tested against Prisma Postgres, but the steps that call those services were not, so please check them with your own accounts before you rely on them.
 
 ### Accounts inbox with Gemini
 
@@ -235,7 +235,7 @@ To configure it, set **Resource** to **Credential**, **Operation** to **Create**
 }}
 ```
 
-The **n8n** node needs an n8n API key with the `credential:create` scope, and the n8n API is not included in every n8n plan. You can find the whole workflow in [`examples/4-create-database-and-postgres-credential.json`](examples/4-create-database-and-postgres-credential.json).
+The **n8n** node needs an n8n API key with the `credential:create` scope, and the n8n API is not included in every n8n plan. You can import the whole workflow from the [database with credential example](examples/4-create-database-and-postgres-credential.json).
 
 ### Use the connection in the same run
 
