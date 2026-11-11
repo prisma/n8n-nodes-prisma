@@ -15,8 +15,9 @@
 		"database"
 	],
 	"author": {
-		"name": "Ankur Datta",
-		"email": "datta@prisma.io"
+		"name": "Prisma",
+		"email": "18557034+prismabot@users.noreply.github.com",
+		"url": "https://www.prisma.io"
 	},
 	"repository": {
 		"type": "git",
