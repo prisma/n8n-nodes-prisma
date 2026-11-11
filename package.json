@@ -1,5 +1,5 @@
 {
-	"name": "n8n-nodes-prisma",
+	"name": "@prisma/n8n-nodes-prisma",
 	"version": "0.1.0",
 	"description": "n8n community node for Prisma Postgres: create and manage projects, databases and connections from n8n workflows",
 	"license": "MIT",
@@ -39,6 +39,9 @@
 	"files": [
 		"dist"
 	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"strict": true,

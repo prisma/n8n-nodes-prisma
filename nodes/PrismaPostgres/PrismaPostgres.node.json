@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-prisma.prismaPostgres",
+	"node": "@prisma/n8n-nodes-prisma.prismaPostgres",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Development", "Data & Storage"],

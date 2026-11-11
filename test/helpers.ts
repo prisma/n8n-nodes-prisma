@@ -34,7 +34,7 @@ export function createContext(
 		getNode: () => ({
 			id: 'node-1',
 			name: 'Prisma Postgres',
-			type: 'n8n-nodes-prisma.prismaPostgres',
+			type: '@prisma/n8n-nodes-prisma.prismaPostgres',
 			typeVersion: 1,
 			position: [0, 0],
 			parameters: {},

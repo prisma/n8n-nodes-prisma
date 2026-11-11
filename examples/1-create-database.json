@@ -32,7 +32,7 @@
 			},
 			"id": "00000000-0000-4000-8000-000000001003",
 			"name": "Create project and database",
-			"type": "n8n-nodes-prisma.prismaPostgres",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
 			"typeVersion": 1,
 			"position": [220, 0],
 			"credentials": {
@@ -56,7 +56,7 @@
 			},
 			"id": "00000000-0000-4000-8000-000000001004",
 			"name": "Create connection",
-			"type": "n8n-nodes-prisma.prismaPostgres",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
 			"typeVersion": 1,
 			"position": [440, 0],
 			"credentials": {

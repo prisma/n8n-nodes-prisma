@@ -1,4 +1,4 @@
-# n8n-nodes-prisma
+# @prisma/n8n-nodes-prisma
 
 Create and manage [Prisma Postgres](https://www.prisma.io/postgres) databases from your [n8n](https://n8n.io) workflows.
 
@@ -30,7 +30,7 @@ A typical setup starts with this node creating a project and its database, follo
 
 Follow the [installation guide](https://docs.n8n.io/integrations/community-nodes/installation/) in the n8n community nodes documentation.
 
-On a self-hosted instance, open **Settings > Community Nodes**, select **Install**, and enter `n8n-nodes-prisma`. When the install finishes, you can find the node by searching the node panel for **Prisma Postgres**.
+On a self-hosted instance, open **Settings > Community Nodes**, select **Install**, and enter `@prisma/n8n-nodes-prisma`. When the install finishes, you can find the node by searching the node panel for **Prisma Postgres**.
 
 n8n Cloud only offers verified community nodes, and this package has not been submitted for verification yet.
 

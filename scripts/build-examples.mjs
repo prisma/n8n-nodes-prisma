@@ -88,7 +88,7 @@ function createDatabase() {
 		node('When clicking ‘Execute workflow’', 'n8n-nodes-base.manualTrigger', 1, [0, 0]),
 		node(
 			'Create project and database',
-			'n8n-nodes-prisma.prismaPostgres',
+			'@prisma/n8n-nodes-prisma.prismaPostgres',
 			1,
 			[220, 0],
 			{
@@ -102,7 +102,7 @@ function createDatabase() {
 		),
 		node(
 			'Create connection',
-			'n8n-nodes-prisma.prismaPostgres',
+			'@prisma/n8n-nodes-prisma.prismaPostgres',
 			1,
 			[440, 0],
 			{
@@ -572,7 +572,7 @@ function createDatabaseAndCredential() {
 		node('When clicking ‘Execute workflow’', 'n8n-nodes-base.manualTrigger', 1, [0, 0]),
 		node(
 			'Create project and database',
-			'n8n-nodes-prisma.prismaPostgres',
+			'@prisma/n8n-nodes-prisma.prismaPostgres',
 			1,
 			[220, 0],
 			{
@@ -586,7 +586,7 @@ function createDatabaseAndCredential() {
 		),
 		node(
 			'Create connection',
-			'n8n-nodes-prisma.prismaPostgres',
+			'@prisma/n8n-nodes-prisma.prismaPostgres',
 			1,
 			[440, 0],
 			{
