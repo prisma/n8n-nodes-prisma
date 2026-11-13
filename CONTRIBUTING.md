@@ -74,4 +74,4 @@ node scripts/build-examples.mjs
 
 n8n requires verified community nodes to be published by GitHub Actions with an npm provenance statement, which is why releases are not published from a local machine.
 
-A maintainer runs `npm run release`, which lints and builds the package, bumps the version, updates the changelog, and pushes a tag. The tag then triggers `.github/workflows/publish.yml`, which publishes the package to npm.
+A maintainer runs `npm run release`, which lints and builds the package, bumps the version, updates the changelog, and pushes a tag. The tag then triggers `.github/workflows/publish.yml`, which publishes the package to npm. The workflow signs in to npm with Trusted Publishing (OIDC), so the repository holds no npm token, and the workflow file must keep the name `publish.yml` because npm trusts that exact file.
