@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- **Project: Create** and **Database: Create** now return only when the new database accepts direct connections. Before this fix, a query sent over a direct connection right after creating a database could fail with "Failed to connect to upstream database". Both operations now take at least 5 seconds while **Wait Until Ready** is on.
+
 ## 0.1.0
 
 The package is published as `@prisma/n8n-nodes-prisma`.

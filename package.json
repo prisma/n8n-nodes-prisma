@@ -1,6 +1,6 @@
 {
 	"name": "@prisma/n8n-nodes-prisma",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "n8n community node for Prisma Postgres: create and manage projects, databases and connections from n8n workflows",
 	"license": "MIT",
 	"homepage": "https://github.com/prisma/n8n-nodes-prisma#readme",

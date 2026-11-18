@@ -49,6 +49,19 @@ PRISMA_SERVICE_TOKEN="..." npm run test:integration
 
 Please never commit a token or a connection string.
 
+### Testing by hand in n8n
+
+`test/manual/validation-workflow.json` is a workflow that uses every operation of the node against the real Prisma API. It creates one project with two databases, runs SQL over a pooled and a direct connection, and deletes everything again. Use a workspace that is meant for testing.
+
+1. Start n8n with the node loaded by running `npm run dev`, or install a published version under **Settings > Community Nodes**.
+2. Create a **Prisma API** credential with a service token from your test workspace and select **Test**. It should report a successful connection.
+3. Create a **Postgres** credential and name it `Prisma Postgres (from connection)`. Switch the **Host**, **Database**, **User**, **Password**, and **Port** fields to **Expression** and enter `{{ $json.host }}`, `{{ $json.database }}`, `{{ $json.user }}`, `{{ $json.password }}`, and `{{ $json.port }}`. Set **SSL** to **Require**. This lets each Postgres node read its login from the connection that the node before it created. The expressions only resolve while a workflow runs, so save the credential without relying on its connection test.
+4. Import the workflow, open each node that shows a credential warning, and select your credential.
+5. Select **Execute workflow**. All 17 nodes should turn green, and the last node should return `{ "deleted": true }`.
+6. Run it a few more times. Timing problems with new databases do not show up on every run, so one green run is not enough.
+
+If a run stops halfway, delete the project whose name starts with `n8n-node-validation` in Prisma Console. The workflow uses the same project name on every run, so a leftover project makes the next run confusing to read.
+
 ## Rules for changes
 
 n8n only verifies community nodes that follow a set of rules, and this project adds a few of its own to keep the node safe to use.

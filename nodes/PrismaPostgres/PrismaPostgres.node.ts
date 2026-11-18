@@ -17,6 +17,13 @@ import { PAGE_SIZE, prismaApiRequest, prismaApiRequestAllItems } from './transpo
 
 const READY_POLL_INTERVAL_MS = 2000;
 const READY_TIMEOUT_MS = 120_000;
+/**
+ * The API reports a new database as ready before its direct endpoint accepts connections.
+ * In tests, 16 of 20 new databases refused a direct connection made right away, and none of
+ * 15 did once the database was 3.5 seconds old. Create operations therefore return no
+ * earlier than this long after the create request was sent.
+ */
+const READY_SETTLE_MS = 5000;
 const SEARCH_MAX_PAGES = 10;
 
 function unwrap(response: IDataObject): IDataObject {
@@ -69,6 +76,7 @@ async function waitForDatabase(
 	context: IExecuteFunctions,
 	database: IDataObject,
 	itemIndex: number,
+	requestedAt: number,
 ): Promise<IDataObject> {
 	let status = database.status;
 	const deadline = Date.now() + READY_TIMEOUT_MS;
@@ -110,6 +118,9 @@ async function waitForDatabase(
 			},
 		);
 	}
+
+	const settleMs = requestedAt + READY_SETTLE_MS - Date.now();
+	if (settleMs > 0) await sleep(settleMs);
 
 	// Keep the create response: it is the only one that carries connection strings.
 	return { ...database, status };
@@ -284,13 +295,14 @@ export class PrismaPostgres implements INodeType {
 					if (region) body.region = region;
 					if (options.workspaceId) body.workspaceId = options.workspaceId;
 
+					const requestedAt = Date.now();
 					const project = unwrap(
 						await prismaApiRequest.call(this, 'POST', '/projects', body, undefined, i),
 					);
 					if (project.database && typeof project.database === 'object') {
 						let database = project.database as IDataObject;
 						if (options.waitUntilReady !== false)
-							database = await waitForDatabase(this, database, i);
+							database = await waitForDatabase(this, database, i, requestedAt);
 						result = {
 							...redactSecrets(project),
 							database: shapeCreatedDatabase(database, options),
@@ -328,10 +340,12 @@ export class PrismaPostgres implements INodeType {
 					};
 					if (options.isDefault === true) body.isDefault = true;
 
+					const requestedAt = Date.now();
 					let database = unwrap(
 						await prismaApiRequest.call(this, 'POST', '/databases', body, undefined, i),
 					);
-					if (options.waitUntilReady !== false) database = await waitForDatabase(this, database, i);
+					if (options.waitUntilReady !== false)
+						database = await waitForDatabase(this, database, i, requestedAt);
 					result = shapeCreatedDatabase(database, options);
 				} else if (resourceName === 'database' && operation === 'get') {
 					const id = locatorId('databaseId', 'database');
