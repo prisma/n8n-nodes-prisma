@@ -1,6 +1,6 @@
 {
 	"name": "@prisma/n8n-nodes-prisma",
-	"version": "0.1.2",
+	"version": "0.1.3",
 	"description": "n8n community node for Prisma Postgres: create and manage projects, databases and connections from n8n workflows",
 	"license": "MIT",
 	"homepage": "https://github.com/prisma/n8n-nodes-prisma#readme",
@@ -15,9 +15,9 @@
 		"database"
 	],
 	"author": {
-		"name": "Prisma",
-		"email": "bot-npm@prisma.io",
-		"url": "https://www.prisma.io"
+		"name": "Ankur Datta",
+		"email": "dev.ankur.datta@gmail.com",
+		"url": "https://www.npmjs.com/~ankur-datta-007"
 	},
 	"repository": {
 		"type": "git",

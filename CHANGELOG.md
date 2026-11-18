@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- The package author is now the maintainer who submits the node to n8n for verification, so that n8n can confirm ownership of the package. The node itself is unchanged.
+
 ## 0.1.2
 
 - The package author email is now an address that receives mail, which n8n needs to confirm ownership of the package. The node itself is unchanged.
