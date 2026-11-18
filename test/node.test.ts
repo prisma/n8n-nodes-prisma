@@ -222,10 +222,20 @@ describe('database create', () => {
 			'GET https://api.prisma.io/v1/databases/db_1',
 			'GET https://api.prisma.io/v1/databases/db_1',
 		]);
-		expect(sleep).toHaveBeenCalledTimes(2);
+		// Two polls, then the pause that lets the direct endpoint come up.
+		expect(sleep).toHaveBeenCalledTimes(3);
 		expect(output[0].json.status).toBe('ready');
 		expect((output[0].json.connection as IDataObject).password).toBe(SECRET);
 		expect((output[0].json.connection as IDataObject).endpointType).toBe('pooled');
+	});
+
+	it('holds a database that is ready at once until its direct endpoint accepts connections', async () => {
+		const { output } = await run([params()], [ok(apiDatabase('ready'), 201)]);
+		expect(sleep).toHaveBeenCalledTimes(1);
+		const pause = vi.mocked(sleep).mock.calls[0][0];
+		expect(pause).toBeGreaterThan(4000);
+		expect(pause).toBeLessThanOrEqual(5000);
+		expect(output[0].json.status).toBe('ready');
 	});
 
 	it('does not poll when Wait Until Ready is off', async () => {
@@ -234,6 +244,7 @@ describe('database create', () => {
 			[ok(apiDatabase('provisioning'), 201)],
 		);
 		expect(http).toHaveBeenCalledTimes(1);
+		expect(sleep).not.toHaveBeenCalled();
 		expect(output[0].json.status).toBe('provisioning');
 	});
 

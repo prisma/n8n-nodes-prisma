@@ -1,0 +1,544 @@
+{
+	"name": "Prisma Postgres node validation",
+	"nodes": [
+		{
+			"id": "00000000-0000-4000-8000-000000000000",
+			"name": "Trigger",
+			"type": "n8n-nodes-base.manualTrigger",
+			"typeVersion": 1,
+			"position": [0, 0],
+			"parameters": {}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000001",
+			"name": "List workspaces",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [220, 0],
+			"parameters": {
+				"resource": "workspace",
+				"operation": "getAll",
+				"returnAll": true
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			}
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000002",
+			"name": "Create project",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [440, 0],
+			"parameters": {
+				"resource": "project",
+				"operation": "create",
+				"name": "n8n-node-validation-manual",
+				"region": "us-east-1",
+				"options": {}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000003",
+			"name": "Create direct connection (project db)",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [660, 0],
+			"parameters": {
+				"resource": "connection",
+				"operation": "create",
+				"databaseId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create project').first().json.database.id }}"
+				},
+				"name": "n8n-direct-1",
+				"endpointType": "direct"
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000004",
+			"name": "Run SQL direct (project db)",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.6,
+			"position": [880, 0],
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "SELECT 1 AS ok;",
+				"options": {}
+			},
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres (from connection)"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000005",
+			"name": "Get project",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [1100, 0],
+			"parameters": {
+				"resource": "project",
+				"operation": "get",
+				"projectId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create project').first().json.id }}"
+				}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000006",
+			"name": "List databases",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [1320, 0],
+			"parameters": {
+				"resource": "database",
+				"operation": "getAll",
+				"returnAll": true,
+				"filters": {
+					"projectId": "={{ $('Create project').first().json.id }}"
+				}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000007",
+			"name": "Get database",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [1540, 0],
+			"parameters": {
+				"resource": "database",
+				"operation": "get",
+				"databaseId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create project').first().json.database.id }}"
+				}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000008",
+			"name": "Create pooled connection",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [1760, 0],
+			"parameters": {
+				"resource": "connection",
+				"operation": "create",
+				"databaseId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create project').first().json.database.id }}"
+				},
+				"name": "n8n",
+				"endpointType": "pooled"
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000009",
+			"name": "Run SQL pooled",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.6,
+			"position": [1980, 0],
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "CREATE TABLE IF NOT EXISTS n8n_check (id serial primary key, note text); INSERT INTO n8n_check (note) VALUES ('written from n8n'); SELECT count(*)::int AS rows FROM n8n_check;",
+				"options": {}
+			},
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres (from connection)"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000010",
+			"name": "Create database",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [2200, 0],
+			"parameters": {
+				"resource": "database",
+				"operation": "create",
+				"projectId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create project').first().json.id }}"
+				},
+				"name": "second-db",
+				"region": "inherit",
+				"options": {}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000011",
+			"name": "Create direct connection",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [2420, 0],
+			"parameters": {
+				"resource": "connection",
+				"operation": "create",
+				"databaseId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create database').first().json.id }}"
+				},
+				"name": "n8n-direct",
+				"endpointType": "direct"
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000012",
+			"name": "Run SQL direct",
+			"type": "n8n-nodes-base.postgres",
+			"typeVersion": 2.6,
+			"position": [2640, 0],
+			"parameters": {
+				"operation": "executeQuery",
+				"query": "BEGIN; CREATE TABLE direct_check (id int primary key); INSERT INTO direct_check VALUES (1),(2); COMMIT; SELECT count(*)::int AS rows FROM direct_check;",
+				"options": {}
+			},
+			"credentials": {
+				"postgres": {
+					"id": "REPLACE_ME",
+					"name": "Prisma Postgres (from connection)"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000013",
+			"name": "Delete database",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [2860, 0],
+			"parameters": {
+				"resource": "database",
+				"operation": "delete",
+				"databaseId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create database').first().json.id }}"
+				}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000014",
+			"name": "List connections",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [3080, 0],
+			"parameters": {
+				"resource": "connection",
+				"operation": "getAll",
+				"returnAll": true,
+				"filters": {
+					"databaseId": "={{ $('Create project').first().json.database.id }}"
+				}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000015",
+			"name": "Delete connection",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [3300, 0],
+			"parameters": {
+				"resource": "connection",
+				"operation": "delete",
+				"connectionId": "={{ $('Create pooled connection').first().json.id }}"
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		},
+		{
+			"id": "00000000-0000-4000-8000-000000000016",
+			"name": "Delete project",
+			"type": "@prisma/n8n-nodes-prisma.prismaPostgres",
+			"typeVersion": 1,
+			"position": [3520, 0],
+			"parameters": {
+				"resource": "project",
+				"operation": "delete",
+				"projectId": {
+					"__rl": true,
+					"mode": "id",
+					"value": "={{ $('Create project').first().json.id }}"
+				}
+			},
+			"credentials": {
+				"prismaApi": {
+					"id": "REPLACE_ME",
+					"name": "Prisma account"
+				}
+			},
+			"executeOnce": true
+		}
+	],
+	"connections": {
+		"Trigger": {
+			"main": [
+				[
+					{
+						"node": "List workspaces",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"List workspaces": {
+			"main": [
+				[
+					{
+						"node": "Create project",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create project": {
+			"main": [
+				[
+					{
+						"node": "Create direct connection (project db)",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create direct connection (project db)": {
+			"main": [
+				[
+					{
+						"node": "Run SQL direct (project db)",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Run SQL direct (project db)": {
+			"main": [
+				[
+					{
+						"node": "Get project",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get project": {
+			"main": [
+				[
+					{
+						"node": "List databases",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"List databases": {
+			"main": [
+				[
+					{
+						"node": "Get database",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Get database": {
+			"main": [
+				[
+					{
+						"node": "Create pooled connection",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create pooled connection": {
+			"main": [
+				[
+					{
+						"node": "Run SQL pooled",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Run SQL pooled": {
+			"main": [
+				[
+					{
+						"node": "Create database",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create database": {
+			"main": [
+				[
+					{
+						"node": "Create direct connection",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Create direct connection": {
+			"main": [
+				[
+					{
+						"node": "Run SQL direct",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Run SQL direct": {
+			"main": [
+				[
+					{
+						"node": "Delete database",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Delete database": {
+			"main": [
+				[
+					{
+						"node": "List connections",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"List connections": {
+			"main": [
+				[
+					{
+						"node": "Delete connection",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		},
+		"Delete connection": {
+			"main": [
+				[
+					{
+						"node": "Delete project",
+						"type": "main",
+						"index": 0
+					}
+				]
+			]
+		}
+	},
+	"settings": {}
+}

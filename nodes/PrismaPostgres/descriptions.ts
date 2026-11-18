@@ -104,7 +104,8 @@ const waitUntilReady: INodeProperties = {
 	name: 'waitUntilReady',
 	type: 'boolean',
 	default: true,
-	description: 'Whether to wait until the database has finished provisioning before returning',
+	description:
+		'Whether to wait until the database has finished provisioning and accepts connections before returning, which takes at least 5 seconds',
 };
 
 export const resource: INodeProperties = {

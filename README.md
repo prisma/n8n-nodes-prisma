@@ -95,7 +95,7 @@ If you would rather start from a ready-made workflow, you can import these steps
 | Database   | Create, Get, Get Many, Delete |
 | Connection | Create, Get Many, Delete      |
 
-Both **Project: Create** and **Database: Create** wait until the database is ready, so the next node in your workflow can use it right away. Wherever an operation asks for a project or a database, you can either pick it from a searchable list or set it with an expression.
+Both **Project: Create** and **Database: Create** wait until the database is ready and accepts connections, so the next node in your workflow can use it right away. A new database needs a few seconds before its direct endpoint accepts connections, which is why these two operations take at least 5 seconds. If you turn off **Wait Until Ready**, turn on **Retry On Fail** for the first query that follows. Wherever an operation asks for a project or a database, you can either pick it from a searchable list or set it with an expression.
 
 **Connection: Create** is the only operation that returns a password, and every other operation leaves passwords out of its output.
 
